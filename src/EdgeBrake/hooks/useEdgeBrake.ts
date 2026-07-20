@@ -1,16 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { CHARACTER_BY_ID } from '../characters'
-import { FIELD_H, FIELD_W, PENGUIN_FRONT, type CharacterId, type Rating, type RoundResult, type ViewState } from '../types'
+import { CHARACTERS, CHARACTER_BY_ID, CHARACTER_IDS, DEFAULT_CHARACTER_ID, nextRosterCharacter } from '../characters'
+import { evaluateStop } from '../rules'
+import { CHARACTER_FRONT, FIELD_H, FIELD_W, type CharacterId, type RoundResult, type ViewState } from '../types'
 import { playSound } from '../utils/sounds'
 
 const START_X = 40
 const READY_MS = 520
 const STOP_HOLD_MS = 110
-const RESULT_MS = 850
 const FALL_MS = 1250
 const START_SPEED = 160
-const BRAKE_FORCE = 320
-const CHARACTER_IDS: CharacterId[] = ['penguin', 'kid', 'granny', 'businessman', 'fox', 'frog', 'bear']
+const BRAKE_FORCE = 225
 
 function randomCliff() {
   return 1820 + Math.round(Math.random() * 120)
@@ -25,15 +24,15 @@ function readUnlocked(): CharacterId[] {
   try {
     const parsed = JSON.parse(localStorage.getItem('edge_brake_unlocked') || '[]')
     const valid = Array.isArray(parsed) ? parsed.filter((id): id is CharacterId => CHARACTER_IDS.includes(id)) : []
-    return Array.from(new Set<CharacterId>(['penguin', ...valid]))
+    return Array.from(new Set<CharacterId>([DEFAULT_CHARACTER_ID, ...valid]))
   } catch {
-    return ['penguin']
+    return [DEFAULT_CHARACTER_ID]
   }
 }
 
 function readCharacter(unlocked: CharacterId[]): CharacterId {
   const saved = localStorage.getItem('edge_brake_character') as CharacterId | null
-  return saved && unlocked.includes(saved) ? saved : 'penguin'
+  return saved && unlocked.includes(saved) ? saved : DEFAULT_CHARACTER_ID
 }
 
 function saveCollection(coins: number, unlocked: CharacterId[], characterId: CharacterId, maxLevel: number) {
@@ -79,7 +78,6 @@ export function useEdgeBrake() {
   const lastTsRef = useRef(0)
   const readyAtRef = useRef(0)
   const stopSinceRef = useRef<number | null>(null)
-  const resultTimerRef = useRef<number | null>(null)
   const fallTimerRef = useRef<number | null>(null)
   const unlockTimerRef = useRef<number | null>(null)
   const retryUnlockAtRef = useRef(0)
@@ -91,23 +89,20 @@ export function useEdgeBrake() {
   }, [])
 
   const clearTimers = useCallback(() => {
-    if (resultTimerRef.current !== null) window.clearTimeout(resultTimerRef.current)
     if (fallTimerRef.current !== null) window.clearTimeout(fallTimerRef.current)
     if (unlockTimerRef.current !== null) window.clearTimeout(unlockTimerRef.current)
-    resultTimerRef.current = null
     fallTimerRef.current = null
     unlockTimerRef.current = null
   }, [])
 
-  const beginRound = useCallback((level: number) => {
+  const beginRound = useCallback((level: number, characterId?: CharacterId, unlockedOverride?: CharacterId[], newUnlock: CharacterId | null = null) => {
     stopSinceRef.current = null
     readyAtRef.current = performance.now()
     const current = stateRef.current
-    const unlocked = [...current.unlockedCharacters]
-    const newlyUnlocked = Object.values(CHARACTER_BY_ID).find(spec => spec.unlockLevel && level >= spec.unlockLevel && !unlocked.includes(spec.id))?.id ?? null
-    if (newlyUnlocked) unlocked.push(newlyUnlocked)
+    const unlocked = unlockedOverride ?? [...current.unlockedCharacters]
+    const nextCharacterId = characterId && unlocked.includes(characterId) ? characterId : current.characterId
     const maxLevel = Math.max(current.maxLevel, level)
-    saveCollection(current.coins, unlocked, current.characterId, maxLevel)
+    saveCollection(current.coins, unlocked, nextCharacterId, maxLevel)
     commit({
       ...current,
       phase: 'ready',
@@ -116,13 +111,14 @@ export function useEdgeBrake() {
       cliffX: randomCliff(),
       level,
       maxLevel,
+      characterId: nextCharacterId,
       unlockedCharacters: unlocked,
-      newUnlock: newlyUnlocked,
+      newUnlock,
       isBraking: false,
       result: null,
       eventKey: current.eventKey + 1,
     })
-    if (newlyUnlocked) {
+    if (newUnlock) {
       playSound('unlock', current.muted)
       unlockTimerRef.current = window.setTimeout(() => commit(now => ({ ...now, newUnlock: null })), 1700)
     }
@@ -178,28 +174,12 @@ export function useEdgeBrake() {
 
   const finishRound = useCallback((distance: number) => {
     const current = stateRef.current
-    let rating: Rating = 'early'
-    let basePoints = 0
-    if (distance <= 8) {
-      rating = 'edge'
-      basePoints = 5
-    } else if (distance <= 22) {
-      rating = 'great'
-      basePoints = 3
-    } else if (distance <= 52) {
-      rating = 'safe'
-      basePoints = 1
-    }
-
-    const nextCombo = rating === 'edge' ? current.combo + 1 : 0
-    const bonus = rating === 'edge' ? Math.min(Math.max(nextCombo - 1, 0), 5) : 0
-    const points = basePoints + bonus
+    const { rating, points, passed, nextCombo, coins: earnedCoins } = evaluateStop(distance, current.combo)
     const nextScore = current.score + points
     const nextBestScore = Math.max(current.bestScore, nextScore)
     const nextBestCombo = Math.max(current.bestCombo, nextCombo)
     const nextBestDistance = current.bestDistance === null ? distance : Math.min(current.bestDistance, distance)
-    const earnedCoins = (rating === 'edge' ? 7 : rating === 'great' ? 4 : rating === 'safe' ? 2 : 1) + Math.min(nextCombo, 3)
-    const result: RoundResult = { distance, rating, points, coins: earnedCoins }
+    const result: RoundResult = { distance, rating, points, coins: earnedCoins, passed }
     const nextCoins = current.coins + earnedCoins
 
     localStorage.setItem('edge_brake_best_score', String(nextBestScore))
@@ -225,8 +205,33 @@ export function useEdgeBrake() {
       eventKey: current.eventKey + 1,
     })
 
-    resultTimerRef.current = window.setTimeout(() => beginRound(current.level + 1), RESULT_MS)
-  }, [beginRound, commit])
+  }, [commit])
+
+  const advanceResult = useCallback(() => {
+    clearTimers()
+    const current = stateRef.current
+    if (current.phase !== 'result' || !current.result) return
+    playSound('button', current.muted)
+    if (!current.result.passed) {
+      stopSinceRef.current = null
+      retryUnlockAtRef.current = performance.now() + 500
+      commit({
+        ...current,
+        phase: 'awaiting',
+        x: START_X,
+        velocity: 0,
+        cliffX: randomCliff(),
+        isBraking: false,
+        result: null,
+        eventKey: current.eventKey + 1,
+      })
+      return
+    }
+    const newlyUnlocked = CHARACTERS.find(character => !current.unlockedCharacters.includes(character.id))?.id ?? null
+    const unlocked = newlyUnlocked ? [...current.unlockedCharacters, newlyUnlocked] : current.unlockedCharacters
+    const nextCharacterId = newlyUnlocked ?? nextRosterCharacter(current.characterId).id
+    beginRound(current.level + 1, nextCharacterId, unlocked, newlyUnlocked)
+  }, [beginRound, clearTimers, commit])
 
   const fall = useCallback(() => {
     const current = stateRef.current
@@ -254,7 +259,7 @@ export function useEdgeBrake() {
       if (current.isBraking) velocity = Math.max(0, velocity - BRAKE_FORCE * CHARACTER_BY_ID[current.characterId].friction * dt)
       else velocity = Math.min(maxSpeed, velocity + acceleration * dt)
       const x = current.x + velocity * dt
-      const front = x + PENGUIN_FRONT
+      const front = x + CHARACTER_FRONT
 
       if (front > current.cliffX + 12) {
         commit({ ...current, x, velocity })
@@ -317,10 +322,6 @@ export function useEdgeBrake() {
     const current = stateRef.current
     const spec = CHARACTER_BY_ID[characterId]
     if (current.unlockedCharacters.includes(characterId)) return selectCharacter(characterId)
-    if (spec.unlockLevel && current.maxLevel < spec.unlockLevel) {
-      playSound('deny', current.muted)
-      return false
-    }
     if (current.coins < spec.cost) {
       playSound('deny', current.muted)
       return false
@@ -344,6 +345,7 @@ export function useEdgeBrake() {
         event.preventDefault()
         if (stateRef.current.phase === 'cover') start()
         else if (stateRef.current.phase === 'awaiting') launchPrepared()
+        else if (stateRef.current.phase === 'result') advanceResult()
         else triggerBrake()
       }
     }
@@ -351,7 +353,7 @@ export function useEdgeBrake() {
     return () => {
       window.removeEventListener('keydown', keyDown)
     }
-  }, [launchPrepared, start, triggerBrake])
+  }, [advanceResult, launchPrepared, start, triggerBrake])
 
   useEffect(() => () => clearTimers(), [clearTimers])
 
@@ -363,5 +365,5 @@ export function useEdgeBrake() {
     return () => window.removeEventListener('resize', compute)
   }, [])
 
-  return { view, scale, start, prepareRetry, launchPrepared, triggerBrake, toggleMuted, goHome, selectCharacter, buyCharacter }
+  return { view, scale, start, prepareRetry, launchPrepared, advanceResult, triggerBrake, toggleMuted, goHome, selectCharacter, buyCharacter }
 }

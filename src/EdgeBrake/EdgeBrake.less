@@ -435,6 +435,80 @@
   &--early { background: #d4e4de; }
 }
 
+.eb-round-result {
+  position: absolute;
+  z-index: 34;
+  left: 50%;
+  top: 138px;
+  width: 308px;
+  padding: 16px;
+  border: 3px solid @ink;
+  border-radius: 18px 18px 24px 16px;
+  color: @ink;
+  background: @cream;
+  box-shadow: 0 9px 0 rgba(9, 25, 38, 0.42);
+  transform: translateX(-50%) rotate(-0.5deg);
+  animation: eb-tag-pop 220ms cubic-bezier(.2, 1.55, .45, 1) both;
+
+  &__score {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    align-items: baseline;
+    padding-bottom: 10px;
+    border-bottom: 2px dashed rgba(16, 33, 41, 0.24);
+  }
+  &__score span { font-size: 12px; font-weight: 900; letter-spacing: .08em; }
+  &__score strong { color: @coral; font-size: 50px; line-height: 52px; font-weight: 900; font-variant-numeric: tabular-nums; }
+  &__score small { margin-left: 4px; color: #657273; font-size: 12px; font-weight: 900; }
+
+  &__summary {
+    position: relative;
+    min-height: 54px;
+    padding: 9px 76px 7px 0;
+  }
+  &__summary > strong { display: block; font-size: 20px; line-height: 24px; font-weight: 900; }
+  &__summary > span { display: block; margin-top: 2px; color: #586b6d; font-size: 12px; font-weight: 800; }
+  &__summary > small { position: absolute; right: 0; top: 13px; display: flex; align-items: center; gap: 3px; color: #946716; font-size: 14px; font-weight: 900; }
+  &__summary svg { width: 17px; height: 17px; color: @ink; }
+
+  &__next {
+    min-height: 70px;
+    display: grid;
+    grid-template-columns: 68px 1fr;
+    grid-template-rows: 24px 32px;
+    align-items: center;
+    column-gap: 10px;
+    margin-bottom: 12px;
+    padding: 4px 10px 4px 4px;
+    border-radius: 13px;
+    background: #c7dfd8;
+  }
+  &__next img { grid-row: 1 / 3; width: 66px; height: 66px; object-fit: contain; pointer-events: none; }
+  &__next span { align-self: end; color: #5c6d6d; font-size: 10px; line-height: 14px; font-weight: 900; letter-spacing: .08em; }
+  &__next strong { align-self: start; overflow: hidden; font-size: 18px; line-height: 24px; font-weight: 900; text-overflow: ellipsis; white-space: nowrap; }
+  .eb-button { width: 100%; }
+
+  &__crew {
+    width: 100%;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    margin-top: 8px;
+    border: 0;
+    border-radius: 10px;
+    color: #405759;
+    background: transparent;
+    font-size: 13px;
+    font-weight: 900;
+    cursor: pointer;
+  }
+  &__crew svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+  &--edge { border-color: #8c6a19; }
+  &--early .eb-round-result__score strong { color: #567071; }
+}
+
 .eb-crystals {
   position: absolute;
   z-index: 16;
@@ -574,7 +648,7 @@
   }
 }
 
-.eb-ghost-start {
+.eb-touch-guide {
   width: 150px;
   min-height: 58px;
   display: flex;
@@ -590,34 +664,32 @@
     height: 56px;
     display: grid;
     place-items: center;
-    animation: eb-ghost-tap 4.6s cubic-bezier(.35, 0, .25, 1) infinite;
+    transform-origin: 50% 24%;
+    animation: eb-touch-press 1.5s ease-in-out infinite;
   }
 
   > span::after {
     content: '';
     position: absolute;
-    left: 7px;
-    top: 1px;
-    width: 28px;
-    height: 28px;
-    border: 2px solid @gold;
+    left: 46%;
+    top: 26%;
+    width: 20px;
+    height: 20px;
+    margin: -10px 0 0 -10px;
+    border: 2px solid rgba(255, 255, 255, 0.85);
     border-radius: 50%;
-    animation: eb-ghost-ring 4.6s ease-out infinite;
+    box-shadow: 0 0 12px rgba(255, 255, 255, 0.5);
+    animation: eb-touch-ripple 1.5s ease-out infinite;
   }
 
   svg {
-    width: 42px;
+    width: 50px;
     height: 50px;
-    overflow: visible;
-    fill: rgba(9, 25, 38, 0.48);
-    stroke: #f7fbf6;
-    stroke-width: 3;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-    filter: drop-shadow(0 3px 0 rgba(9, 25, 38, 0.45));
+    display: block;
+    fill: rgba(247, 251, 246, 0.96);
+    filter: drop-shadow(0 0 6px rgba(58, 76, 128, 0.55)) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.25));
   }
 
-  svg circle { fill: rgba(255, 209, 102, 0.12); stroke: @gold; stroke-width: 2; }
   strong { font-size: 14px; line-height: 18px; font-weight: 900; letter-spacing: 0.04em; }
 }
 
@@ -718,11 +790,11 @@
     height: 56px;
     color: #f7fbf6;
     filter: drop-shadow(0 4px 0 rgba(9, 25, 38, 0.5));
-    animation: eb-ghost-tap 1.3s ease-in-out infinite;
+    transform-origin: 50% 24%;
+    animation: eb-touch-press 1.5s ease-in-out infinite;
   }
 
-  svg { width: 100%; height: 100%; fill: rgba(247, 251, 246, 0.1); stroke: currentColor; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
-  circle { fill: none; opacity: 0.5; }
+  svg { width: 100%; height: 100%; display: block; fill: rgba(247, 251, 246, 0.96); filter: drop-shadow(0 0 6px rgba(58, 76, 128, 0.55)) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.25)); }
   strong { text-shadow: 0 2px 0 rgba(9, 25, 38, 0.62); }
 }
 
@@ -952,7 +1024,7 @@
 .eb-roster-card {
   position: relative;
   min-width: 0;
-  min-height: 190px;
+  min-height: 208px;
   display: flex;
   flex-direction: column;
   align-items: stretch;
@@ -968,6 +1040,7 @@
   &__portrait img { width: 100%; height: 100%; object-fit: contain; pointer-events: none; }
   &__portrait svg { width: 86px; height: 86px; }
   > strong { margin-top: 7px; overflow: hidden; font-size: 14px; line-height: 18px; font-weight: 900; text-overflow: ellipsis; white-space: nowrap; }
+  &__category { margin-top: 1px; color: #607172; font-size: 9px; line-height: 12px; font-weight: 800; }
 
   &__grip { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 5px; margin-top: 5px; }
   &__grip i { color: #627070; font-size: 9px; font-style: normal; font-weight: 900; }
@@ -989,16 +1062,14 @@
 @keyframes eb-wind { to { transform: translateX(22px) rotate(2deg); opacity: 0.5; } }
 @keyframes eb-combo-pop { 50% { transform: scale(1.25); } }
 @keyframes eb-finger-press { 0%, 100% { transform: translateY(-2px); } 45%, 65% { transform: translateY(3px) scaleY(0.86); } }
-@keyframes eb-ghost-tap {
-  0%, 12%, 76%, 100% { opacity: 0; transform: translate(15px, 14px) rotate(-8deg); }
-  22%, 40% { opacity: 0.92; transform: translate(0, 0) rotate(-8deg); }
-  31% { opacity: 1; transform: translate(0, 5px) rotate(-8deg) scale(0.96); }
-  56% { opacity: 0.82; transform: translate(0, 0) rotate(-8deg); }
+@keyframes eb-touch-press {
+  0%, 100% { transform: translateY(-5px) scale(1); }
+  42%, 68% { transform: translateY(3px) scale(0.93); }
 }
-@keyframes eb-ghost-ring {
-  0%, 24%, 100% { opacity: 0; transform: scale(0.5); }
-  31% { opacity: 0.95; transform: scale(0.72); }
-  48% { opacity: 0; transform: scale(1.45); }
+@keyframes eb-touch-ripple {
+  0%, 28% { opacity: 0; transform: scale(0.5); }
+  44% { opacity: 0.85; }
+  100% { opacity: 0; transform: scale(2.4); }
 }
 @keyframes eb-ready { 0% { opacity: 0; transform: translate(-50%, 10px) scale(0.9); } 35%, 75% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -8px); } }
 @keyframes eb-snow-spray {
@@ -1025,6 +1096,6 @@
   }
 
   .eb__wind { display: none; }
-  .eb-ghost-start > span, .eb-ghost-start > span::after { animation: none !important; opacity: 1; transform: none; }
+  .eb-touch-guide > span, .eb-touch-guide > span::after { animation: none !important; opacity: 1; transform: none; }
   .eb-crystals span:nth-child(n + 7) { display: none; }
 }

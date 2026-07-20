@@ -1,10 +1,10 @@
 import { useMemo, useState, type CSSProperties } from 'react'
 import aigramSrc from './img/aigram.svg'
-import { CHARACTERS, CHARACTER_BY_ID, weatherForLevel } from './characters'
+import { CHARACTERS, CHARACTER_BY_ID, characterName, nextRosterCharacter, weatherForLevel } from './characters'
 import EdgeBrakeScene from './components/EdgeBrakeScene'
 import { useEdgeBrake } from './hooks/useEdgeBrake'
 import { createTranslator, detectLocale, type CopyKey } from './i18n'
-import { FIELD_H, FIELD_W, PENGUIN_FRONT, type CharacterId, type Rating } from './types'
+import { CHARACTER_FRONT, FIELD_H, FIELD_W, type CharacterId, type Rating } from './types'
 import './EdgeBrake.less'
 
 function SoundIcon({ muted }: { muted: boolean }) {
@@ -28,31 +28,16 @@ function CloseIcon() {
   return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg>
 }
 
-function GhostHand() {
+function TouchAppIcon() {
   return (
-    <svg viewBox="0 0 64 76" aria-hidden="true">
-      <path d="M26 35V15c0-5 8-5 8 0v16-11c0-5 8-5 8 0v13-8c0-5 8-5 8 0v15-6c0-5 8-5 8 0v18c0 12-8 20-21 20-9 0-14-4-19-11L8 48c-3-5 3-10 7-6l11 9" />
-      <circle cx="30" cy="13" r="11" />
-    </svg>
-  )
-}
-
-function PenguinPortrait() {
-  return (
-    <svg className="eb-character-portrait" viewBox="0 0 96 96" aria-hidden="true">
-      <ellipse cx="48" cy="82" rx="30" ry="7" fill="#16303a" opacity=".22" />
-      <path d="M28 69c-5-17-2-43 17-53 21 7 29 34 20 55-10 9-28 8-37-2Z" fill="#17272d" />
-      <path d="M42 67c-5-12-3-29 6-38 13 8 17 25 11 39-5 5-12 5-17-1Z" fill="#f5f0dd" />
-      <path d="m62 37 20 8-18 8Z" fill="#f3a83b" />
-      <circle cx="59" cy="31" r="3.5" fill="#f7fbf6" /><circle cx="60" cy="32" r="1.7" fill="#102129" />
-      <path d="M32 71 15 80l22 2ZM59 72l20 8-23 3Z" fill="#f3a83b" />
-      <path d="m30 43-13 20 18-7ZM65 47l14 18-18-8Z" fill="#17272d" />
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M9 11.24V7.5C9 6.12 10.12 5 11.5 5S14 6.12 14 7.5v3.74c1.21-.81 2-2.18 2-3.74C16 5.01 13.99 3 11.5 3S7 5.01 7 7.5c0 1.56.79 2.93 2 3.74zm9.84 4.63-4.54-2.26c-.17-.07-.35-.11-.54-.11H13v-6c0-.83-.67-1.5-1.5-1.5S10 6.67 10 7.5v10.74l-3.43-.72c-.08-.01-.15-.03-.24-.03-.31 0-.59.13-.79.33l-.79.8 4.94 4.94c.27.27.65.44 1.06.44h6.79c.75 0 1.33-.55 1.44-1.28l.75-5.27c.01-.07.02-.14.02-.2 0-.62-.38-1.16-.91-1.39z" />
     </svg>
   )
 }
 
 export default function EdgeBrake() {
-  const { view, scale, start, prepareRetry, launchPrepared, triggerBrake, toggleMuted, goHome, selectCharacter, buyCharacter } = useEdgeBrake()
+  const { view, scale, start, prepareRetry, launchPrepared, advanceResult, triggerBrake, toggleMuted, goHome, selectCharacter, buyCharacter } = useEdgeBrake()
   const [locale] = useState(detectLocale)
   const [rosterOpen, setRosterOpen] = useState(false)
   const [deniedCharacter, setDeniedCharacter] = useState<CharacterId | null>(null)
@@ -60,12 +45,15 @@ export default function EdgeBrake() {
   const isInteractive = view.phase === 'playing' && !rosterOpen
   const showHud = view.phase !== 'cover'
   const weather = weatherForLevel(view.level)
-  const remaining = Math.max(0, Math.round(view.cliffX - (view.x + PENGUIN_FRONT)))
-  const danger = Math.min(1, Math.max(0, 1 - remaining / Math.max(1, view.cliffX - 40 - PENGUIN_FRONT)))
+  const remaining = Math.max(0, Math.round(view.cliffX - (view.x + CHARACTER_FRONT)))
+  const danger = Math.min(1, Math.max(0, 1 - remaining / Math.max(1, view.cliffX - 40 - CHARACTER_FRONT)))
   const trackProgress = Math.min(1, Math.max(0, (view.x - 40) / Math.max(1, view.cliffX - 40)))
   const ratingCopy: Record<Rating, CopyKey> = {
     edge: 'edge', great: 'great', safe: 'safe', early: 'early',
   }
+  const nextResultCharacter = view.result?.passed
+    ? CHARACTERS.find(character => !view.unlockedCharacters.includes(character.id)) ?? nextRosterCharacter(view.characterId)
+    : CHARACTER_BY_ID[view.characterId]
 
   return (
     <main
@@ -114,7 +102,7 @@ export default function EdgeBrake() {
       )}
 
       <section className="eb-stage" aria-label={t('title')}>
-        <EdgeBrakeScene x={view.x} cliffX={view.cliffX} braking={view.isBraking} phase={view.phase} rating={view.result?.rating ?? null} characterId={view.characterId} velocity={view.velocity} weather={weather} />
+        <EdgeBrakeScene x={view.x} cliffX={view.cliffX} braking={view.isBraking} phase={view.phase} rating={view.result?.rating ?? null} characterId={view.characterId} preloadCharacterId={nextResultCharacter.id} velocity={view.velocity} weather={weather} />
       </section>
 
       {isInteractive && (
@@ -127,12 +115,23 @@ export default function EdgeBrake() {
       )}
 
       {view.phase === 'result' && view.result && (
-        <div className={`eb-result-tag eb-result-tag--${view.result.rating}`} key={view.eventKey}>
-          <strong>{t(ratingCopy[view.result.rating])}</strong>
-          <span>{t('distance', { n: view.result.distance })}</span>
-          <small><CoinIcon />+{view.result.coins}</small>
-          {view.result.points > 0 && <em>+{view.result.points}</em>}
-        </div>
+        <section className={`eb-round-result eb-round-result--${view.result.rating}`} key={view.eventKey} onPointerDown={event => event.stopPropagation()}>
+          <div className="eb-round-result__score"><span>{t('roundScore')}</span><strong>{view.result.points}</strong><small>/ 100</small></div>
+          <div className="eb-round-result__summary">
+            <strong>{t(ratingCopy[view.result.rating])}</strong>
+            <span>{t('distance', { n: view.result.distance })}</span>
+            <small><CoinIcon />+{view.result.coins}</small>
+          </div>
+          <div className="eb-round-result__next">
+            <img src={nextResultCharacter.spriteUrl} alt="" draggable={false} />
+            <span>{view.result.passed ? t('nextCrew') : t('retryCrew')}</span>
+            <strong>{characterName(nextResultCharacter.id, locale)}</strong>
+          </div>
+          <button className="eb-button" type="button" onClick={advanceResult}>
+            {view.result.passed ? t('nextCharacter') : t('retryRound')}
+          </button>
+          <button className="eb-round-result__crew" type="button" onClick={() => setRosterOpen(true)}><CrewIcon />{t('expedition')}</button>
+        </section>
       )}
 
       {view.phase === 'falling' && <div className="eb-fall-copy">{t('fallen')}</div>}
@@ -141,7 +140,7 @@ export default function EdgeBrake() {
         <div className="eb-unlock-toast" key={`unlock-${view.newUnlock}-${view.eventKey}`}>
           <CrewIcon />
           <span>{t('unlocked')}</span>
-          <strong>{t(`char_${view.newUnlock}` as CopyKey)}</strong>
+          <strong>{characterName(view.newUnlock, locale)}</strong>
         </div>
       )}
 
@@ -155,14 +154,14 @@ export default function EdgeBrake() {
           <h1>{t('title')}</h1>
           <p>{t('subtitle')}</p>
           <div className="eb-cover__scene-space" aria-hidden="true" />
-          <div className="eb-ghost-start" aria-hidden="true">
-            <span><GhostHand /></span>
+          <div className="eb-touch-guide" aria-hidden="true">
+            <span><TouchAppIcon /></span>
             <strong>{t('tapStart')}</strong>
           </div>
           <button className="eb-crew-entry" type="button" onPointerDown={event => event.stopPropagation()} onClick={() => setRosterOpen(true)}>
             <span><CrewIcon /></span>
             <strong>{t('expedition')}</strong>
-            <em>{t(`char_${view.characterId}` as CopyKey)} · ×{CHARACTER_BY_ID[view.characterId].friction.toFixed(2)}</em>
+            <em>{characterName(view.characterId, locale)} · ×{CHARACTER_BY_ID[view.characterId].friction.toFixed(2)}</em>
             <i><CoinIcon />{view.coins}</i>
           </button>
         </section>
@@ -172,7 +171,7 @@ export default function EdgeBrake() {
 
       {view.phase === 'awaiting' && (
         <div className="eb-retry-ready" key={view.eventKey} aria-hidden="true">
-          <span><GhostHand /></span>
+          <span><TouchAppIcon /></span>
           <strong>{t('tapStart')}</strong>
         </div>
       )}
@@ -218,7 +217,7 @@ export default function EdgeBrake() {
         <section className="eb-roster" aria-label={t('expedition')} onPointerDown={event => event.stopPropagation()}>
           <div className="eb-roster__sheet">
             <header>
-              <div><span>{t('expedition')}</span><strong>{t('expeditionNote')}</strong></div>
+              <div><span>{t('expedition')}</span><strong>{t('collection', { n: view.unlockedCharacters.length })} · {t('expeditionNote')}</strong></div>
               <div className="eb-roster__balance"><CoinIcon />{view.coins}</div>
               <button type="button" aria-label={t('close')} onClick={() => { setRosterOpen(false); setDeniedCharacter(null) }}><CloseIcon /></button>
             </header>
@@ -226,7 +225,6 @@ export default function EdgeBrake() {
               {CHARACTERS.map(character => {
                 const unlocked = view.unlockedCharacters.includes(character.id)
                 const selected = view.characterId === character.id
-                const milestoneLocked = Boolean(character.unlockLevel && view.maxLevel < character.unlockLevel)
                 const short = Math.max(0, character.cost - view.coins)
                 return (
                   <button
@@ -234,17 +232,18 @@ export default function EdgeBrake() {
                     type="button"
                     className={`eb-roster-card${selected ? ' eb-roster-card--selected' : ''}${!unlocked ? ' eb-roster-card--locked' : ''}${deniedCharacter === character.id ? ' eb-roster-card--denied' : ''}`}
                     onClick={() => {
-                      const success = unlocked ? selectCharacter(character.id) : !milestoneLocked && buyCharacter(character.id)
+                      const success = unlocked ? selectCharacter(character.id) : buyCharacter(character.id)
                       setDeniedCharacter(success ? null : character.id)
                     }}
                   >
-                    <span className="eb-roster-card__portrait">{character.spriteUrl ? <img src={character.spriteUrl} alt="" draggable={false} /> : <PenguinPortrait />}</span>
-                    <strong>{t(`char_${character.id}` as CopyKey)}</strong>
-                    <span className="eb-roster-card__grip"><i>{t('friction')}</i><b><em style={{ width: `${character.friction / 1.22 * 100}%` }} /></b><small>×{character.friction.toFixed(2)}</small></span>
+                    <span className="eb-roster-card__portrait"><img src={character.spriteUrl} alt="" draggable={false} loading="lazy" /></span>
+                    <strong>{characterName(character.id, locale)}</strong>
+                    <span className="eb-roster-card__category">{t(`category_${character.category}` as CopyKey)}</span>
+                    <span className="eb-roster-card__grip"><i>{t('friction')}</i><b><em style={{ width: `${character.friction / 1.24 * 100}%` }} /></b><small>×{character.friction.toFixed(2)}</small></span>
                     <span className={`eb-roster-card__tag${selected ? ' is-selected' : unlocked ? ' is-owned' : ''}`}>
-                      {selected ? t('inUse') : unlocked ? t('owned') : milestoneLocked ? t('levelUnlock', { n: character.unlockLevel }) : t('buy', { n: character.cost })}
+                      {selected ? t('inUse') : unlocked ? t('owned') : t('buy', { n: character.cost })}
                     </span>
-                    {deniedCharacter === character.id && !milestoneLocked && short > 0 && <span className="eb-roster-card__deny">{t('notEnough', { n: short })}</span>}
+                    {deniedCharacter === character.id && short > 0 && <span className="eb-roster-card__deny">{t('notEnough', { n: short })}</span>}
                   </button>
                 )
               })}

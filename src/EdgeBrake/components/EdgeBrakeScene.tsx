@@ -2,7 +2,7 @@ import { useGLTF } from '@react-three/drei'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { useEffect, useMemo, useRef } from 'react'
 import * as THREE from 'three'
-import { CHARACTER_BY_ID } from '../characters'
+import { CHARACTER_BY_ID, CHARACTERS, nextRosterCharacter } from '../characters'
 import type { CharacterId, GamePhase, Rating, WeatherKind } from '../types'
 
 const C = {
@@ -19,9 +19,7 @@ const C = {
 
 const screenToWorld = (px: number) => (px - 195) / 36
 
-Object.values(CHARACTER_BY_ID).forEach(spec => {
-  if (spec.modelUrl) useGLTF.preload(spec.modelUrl)
-})
+useGLTF.preload(CHARACTERS[0].modelUrl)
 
 function material(color: string, emissive?: string) {
   return <meshStandardMaterial color={color} flatShading roughness={0.88} metalness={0} emissive={emissive} emissiveIntensity={emissive ? 0.55 : 0} />
@@ -144,7 +142,12 @@ function AssetCharacter({ id, x, braking, phase, velocity }: { id: CharacterId; 
     const pivots: THREE.Object3D[] = []
     const modelRoot = copy.children.find(child => child.type === 'Group') ?? copy
     modelRoot.updateMatrixWorld(true)
-    if (spec.kind === 'person') {
+    if (spec.motion === 'human' || spec.motion === 'mech') {
+      const namedRig = ['rig_legL', 'rig_legR', 'rig_armL', 'rig_armR'].map(name => modelRoot.getObjectByName(name))
+      if (namedRig.every((pivot): pivot is THREE.Object3D => Boolean(pivot))) {
+        pivots.push(...namedRig)
+        return { copy, pivots }
+      }
       const bounds = new THREE.Box3().setFromObject(modelRoot)
       const size = bounds.getSize(new THREE.Vector3())
       const center = bounds.getCenter(new THREE.Vector3())
@@ -167,7 +170,7 @@ function AssetCharacter({ id, x, braking, phase, velocity }: { id: CharacterId; 
         else if (low && Math.abs(meshCenter.x - center.x) > size.x * 0.06) (meshCenter.x < center.x ? legL : legR).attach(mesh)
       }
       pivots.push(legL, legR, armL, armR)
-    } else {
+    } else if (spec.motion === 'quadruped' || spec.motion === 'frog') {
       const bounds = new THREE.Box3().setFromObject(modelRoot)
       const size = bounds.getSize(new THREE.Vector3())
       const center = bounds.getCenter(new THREE.Vector3())
@@ -198,9 +201,32 @@ function AssetCharacter({ id, x, braking, phase, velocity }: { id: CharacterId; 
         feet[closest].attach(mesh)
       })
       pivots.push(...feet)
+    } else if (spec.motion === 'bird') {
+      const bounds = new THREE.Box3().setFromObject(modelRoot)
+      const size = bounds.getSize(new THREE.Vector3())
+      const center = bounds.getCenter(new THREE.Vector3())
+      const legL = new THREE.Group()
+      const legR = new THREE.Group()
+      const wingL = new THREE.Group()
+      const wingR = new THREE.Group()
+      legL.position.set(center.x, bounds.min.y + size.y * 0.26, center.z - size.z * 0.18)
+      legR.position.set(center.x, bounds.min.y + size.y * 0.26, center.z + size.z * 0.18)
+      wingL.position.set(center.x, bounds.min.y + size.y * 0.62, center.z - size.z * 0.38)
+      wingR.position.set(center.x, bounds.min.y + size.y * 0.62, center.z + size.z * 0.38)
+      modelRoot.add(legL, legR, wingL, wingR)
+      modelRoot.updateMatrixWorld(true)
+      const meshes = modelRoot.children.filter(child => child instanceof THREE.Mesh) as THREE.Mesh[]
+      meshes.forEach(mesh => {
+        const meshCenter = new THREE.Box3().setFromObject(mesh).getCenter(new THREE.Vector3())
+        const low = meshCenter.y < bounds.min.y + size.y * 0.34
+        const outside = Math.abs(meshCenter.z - center.z) > size.z * 0.3
+        if (low) (meshCenter.z < center.z ? legL : legR).attach(mesh)
+        else if (outside && meshCenter.y < bounds.min.y + size.y * 0.78) (meshCenter.z < center.z ? wingL : wingR).attach(mesh)
+      })
+      pivots.push(legL, legR, wingL, wingR)
     }
     return { copy, pivots }
-  }, [gltf.scene, spec.kind])
+  }, [gltf.scene, spec.motion])
   const clone = prepared.copy
   const group = useRef<THREE.Group>(null)
   const pose = useRef<THREE.Group>(null)
@@ -242,13 +268,16 @@ function AssetCharacter({ id, x, braking, phase, velocity }: { id: CharacterId; 
       : 0
     const airborne = THREE.MathUtils.clamp((fallElapsed - 0.08) / 0.92, 0, 1)
     const fallWave = Math.sin(airborne * Math.PI * 5)
-    const strideRaw = moving ? Math.sin(time * (4.9 + velocity * 0.009)) : 0
+    const motionRate = spec.motion === 'mech' ? 0.9 : spec.motion === 'bird' ? 1.28 : spec.motion === 'frog' ? 0.82 : 1
+    const strideRaw = moving ? Math.sin(time * (4.9 + velocity * 0.009) * motionRate) : 0
     const stride = Math.sign(strideRaw) * Math.pow(Math.abs(strideRaw), 0.68)
     const breath = (Math.sin(time * Math.PI * 1.6) + 1) * 0.5
     const readyAction = phase === 'ready' ? THREE.MathUtils.clamp((phaseAge - 0.08) / 0.44, 0, 1) : 0
     const readyCrouch = Math.sin(readyAction * Math.PI)
     const brakePunch = braking ? Math.min(brakeAge / 0.18, 1) : 0
-    const bounce = idle ? breath * 0.035 : moving ? Math.abs(strideRaw) * 0.065 : 0
+    const bounce = spec.motion === 'hover'
+      ? (idle ? Math.sin(time * 2.2) * 0.06 : moving ? Math.sin(time * 4.2) * 0.045 : 0)
+      : idle ? breath * (spec.motion === 'mech' ? 0.018 : 0.035) : moving ? Math.abs(strideRaw) * (spec.motion === 'mech' ? 0.035 : 0.065) : 0
     const baseScale = spec.scale
 
     group.current.position.x = THREE.MathUtils.damp(group.current.position.x, targetX, 28, delta)
@@ -263,7 +292,9 @@ function AssetCharacter({ id, x, braking, phase, velocity }: { id: CharacterId; 
       group.current.visible = true
       group.current.position.y = THREE.MathUtils.damp(group.current.position.y, 0.38, 18, delta)
       group.current.rotation.z = THREE.MathUtils.damp(group.current.rotation.z, moving ? stride * 0.025 : 0, 15, delta)
-      group.current.rotation.x = THREE.MathUtils.damp(group.current.rotation.x, braking ? 0.24 * brakePunch : moving ? -0.14 : 0, 15, delta)
+      const movingLean = spec.motion === 'hover' ? -0.2 : spec.motion === 'mech' ? -0.09 : -0.14
+      const brakeLean = spec.motion === 'hover' ? 0.34 : spec.motion === 'frog' ? 0.1 : 0.24
+      group.current.rotation.x = THREE.MathUtils.damp(group.current.rotation.x, braking ? brakeLean * brakePunch : moving ? movingLean : 0, 15, delta)
       group.current.rotation.y = THREE.MathUtils.damp(group.current.rotation.y, spec.headingYaw, 18, delta)
       group.current.scale.setScalar(baseScale)
     }
@@ -272,31 +303,44 @@ function AssetCharacter({ id, x, braking, phase, velocity }: { id: CharacterId; 
     pose.current.position.y = THREE.MathUtils.damp(pose.current.position.y, bounce - readyCrouch * 0.1 - (braking ? 0.12 : 0), 18, delta)
     pose.current.position.x = THREE.MathUtils.damp(pose.current.position.x, skateShift, 16, delta)
     const brakeTremor = braking && brakeAge > 0.18 ? Math.sin(brakeAge * 30) * 0.065 : 0
+    const brakeArmSwing = braking ? Math.sin(Math.max(0, brakeAge - 0.08) * 12.1) * 0.27 * brakePunch : 0
+    const brakeLegBalance = braking ? Math.sin(Math.max(0, brakeAge - 0.08) * 15.4) * 0.09 * brakePunch : 0
     pose.current.rotation.z = THREE.MathUtils.damp(pose.current.rotation.z, falling ? fallWave * 0.12 : phase === 'ready' ? -0.12 * readyCrouch : braking ? brakeTremor : moving ? stride * 0.055 : Math.sin(time * 2.2) * 0.018, 16, delta)
     pose.current.rotation.y = THREE.MathUtils.damp(pose.current.rotation.y, moving ? stride * 0.1 : idle ? Math.sin(time * 1.8) * 0.025 : 0, 14, delta)
-    const verticalScale = 1 + breath * (idle ? 0.025 : 0) - readyCrouch * 0.085 - (braking ? 0.07 : 0)
+    const squashWeight = spec.motion === 'mech' ? 0.35 : spec.motion === 'hover' ? 0.55 : spec.motion === 'frog' ? 1.25 : 1
+    const verticalScale = 1 + breath * (idle ? 0.025 * squashWeight : 0) - readyCrouch * 0.085 * squashWeight - (braking ? 0.07 * squashWeight : 0)
     pose.current.scale.set(1 + readyCrouch * 0.035, verticalScale, 1)
 
     if (rig.length >= 4) {
-      if (spec.kind === 'person') {
+      if (spec.motion === 'human' || spec.motion === 'mech') {
+        const limbWeight = spec.motion === 'mech' ? 0.68 : 1
         const pushLeft = moving ? Math.max(0, stride) : 0
         const pushRight = moving ? Math.max(0, -stride) : 0
         const legAction = phase === 'ready' ? readyCrouch * 0.34 : 0
         const armCounter = moving ? stride * 0.82 : idle ? Math.sin(time * 1.8) * 0.1 : 0
         const armLeftOut = moving ? Math.max(0, armCounter) : 0
         const armRightOut = moving ? Math.max(0, -armCounter) : 0
-        rig[0].rotation.x = THREE.MathUtils.damp(rig[0].rotation.x, falling ? 0.72 + fallWave * 0.5 : braking ? 0.32 + brakeTremor : legAction + stride * 1.08, 22, delta)
-        rig[1].rotation.x = THREE.MathUtils.damp(rig[1].rotation.x, falling ? -0.72 - fallWave * 0.42 : braking ? 0.32 - brakeTremor : -legAction - stride * 1.08, 22, delta)
-        rig[2].rotation.x = THREE.MathUtils.damp(rig[2].rotation.x, falling ? -0.82 - fallWave * 0.62 : braking ? -0.5 + brakeTremor : -armCounter, 22, delta)
-        rig[3].rotation.x = THREE.MathUtils.damp(rig[3].rotation.x, falling ? 0.82 - fallWave * 0.55 : braking ? -0.5 - brakeTremor : armCounter, 22, delta)
-        rig[0].rotation.z = THREE.MathUtils.damp(rig[0].rotation.z, falling ? -0.58 - fallWave * 0.28 : braking ? -0.98 - brakeTremor : -0.18 - pushLeft * 0.68, 22, delta)
-        rig[1].rotation.z = THREE.MathUtils.damp(rig[1].rotation.z, falling ? 0.58 - fallWave * 0.28 : braking ? 0.98 + brakeTremor : 0.18 + pushRight * 0.68, 22, delta)
-        rig[2].rotation.z = THREE.MathUtils.damp(rig[2].rotation.z, falling ? -1.16 - fallWave * 0.34 : braking ? -1.48 - brakeTremor : -0.48 - armLeftOut * 0.78, 22, delta)
-        rig[3].rotation.z = THREE.MathUtils.damp(rig[3].rotation.z, falling ? 1.16 - fallWave * 0.34 : braking ? 1.48 + brakeTremor : 0.48 + armRightOut * 0.78, 22, delta)
+        rig[0].rotation.x = THREE.MathUtils.damp(rig[0].rotation.x, falling ? 0.72 + fallWave * 0.5 : braking ? (0.32 + brakeLegBalance) * limbWeight : (legAction + stride * 1.08) * limbWeight, 22, delta)
+        rig[1].rotation.x = THREE.MathUtils.damp(rig[1].rotation.x, falling ? -0.72 - fallWave * 0.42 : braking ? (0.32 - brakeLegBalance) * limbWeight : (-legAction - stride * 1.08) * limbWeight, 22, delta)
+        rig[2].rotation.x = THREE.MathUtils.damp(rig[2].rotation.x, falling ? -0.82 - fallWave * 0.62 : braking ? (1.16 + brakeArmSwing) * limbWeight : -armCounter * limbWeight, 22, delta)
+        rig[3].rotation.x = THREE.MathUtils.damp(rig[3].rotation.x, falling ? 0.82 - fallWave * 0.55 : braking ? (1.16 - brakeArmSwing) * limbWeight : armCounter * limbWeight, 22, delta)
+        rig[0].rotation.z = THREE.MathUtils.damp(rig[0].rotation.z, falling ? -0.58 - fallWave * 0.28 : braking ? -0.98 - brakeLegBalance : -0.18 - pushLeft * 0.68, 22, delta)
+        rig[1].rotation.z = THREE.MathUtils.damp(rig[1].rotation.z, falling ? 0.58 - fallWave * 0.28 : braking ? 0.98 + brakeLegBalance : 0.18 + pushRight * 0.68, 22, delta)
+        rig[2].rotation.z = THREE.MathUtils.damp(rig[2].rotation.z, falling ? -1.16 - fallWave * 0.34 : braking ? -0.62 - Math.abs(brakeArmSwing) * 0.18 : -0.48 - armLeftOut * 0.78, 22, delta)
+        rig[3].rotation.z = THREE.MathUtils.damp(rig[3].rotation.z, falling ? 1.16 - fallWave * 0.34 : braking ? 0.62 + Math.abs(brakeArmSwing) * 0.18 : 0.48 + armRightOut * 0.78, 22, delta)
+      } else if (spec.motion === 'bird') {
+        const shortStep = moving ? stride * 0.82 : phase === 'ready' ? readyCrouch * 0.28 : 0
+        const wingBalance = moving ? stride * 0.34 : idle ? Math.sin(time * 2.1) * 0.08 : 0
+        rig[0].rotation.z = THREE.MathUtils.damp(rig[0].rotation.z, braking ? -0.68 - brakeTremor : shortStep, 24, delta)
+        rig[1].rotation.z = THREE.MathUtils.damp(rig[1].rotation.z, braking ? 0.68 + brakeTremor : -shortStep, 24, delta)
+        rig[2].rotation.x = THREE.MathUtils.damp(rig[2].rotation.x, braking ? -0.92 - brakeArmSwing : -0.25 - wingBalance, 22, delta)
+        rig[3].rotation.x = THREE.MathUtils.damp(rig[3].rotation.x, braking ? 0.92 - brakeArmSwing : 0.25 + wingBalance, 22, delta)
       } else {
-        const diagonal = moving ? stride * 0.72 : phase === 'ready' ? readyCrouch * 0.24 : 0
-        ;[0, 3].forEach(index => { rig[index].rotation.z = THREE.MathUtils.damp(rig[index].rotation.z, falling ? 0.74 + fallWave * 0.45 : braking ? 0.72 + brakeTremor : diagonal, 22, delta) })
-        ;[1, 2].forEach(index => { rig[index].rotation.z = THREE.MathUtils.damp(rig[index].rotation.z, falling ? -0.74 + fallWave * 0.45 : braking ? -0.48 - brakeTremor : -diagonal, 22, delta) })
+        const frogKick = spec.motion === 'frog' ? Math.max(0, stride) * 0.95 : stride * 0.72
+        const diagonal = moving ? frogKick : phase === 'ready' ? readyCrouch * 0.24 : 0
+        const brakePawWave = braking ? Math.sin(brakeAge * 12.1) * 0.16 : 0
+        ;[0, 3].forEach(index => { rig[index].rotation.z = THREE.MathUtils.damp(rig[index].rotation.z, falling ? 0.74 + fallWave * 0.45 : braking ? 0.68 + brakePawWave : diagonal, 22, delta) })
+        ;[1, 2].forEach(index => { rig[index].rotation.z = THREE.MathUtils.damp(rig[index].rotation.z, falling ? -0.74 + fallWave * 0.45 : braking ? -0.52 - brakePawWave : -diagonal, 22, delta) })
         rig.forEach((limb, index) => {
           const side = index % 2 === 0 ? -1 : 1
           limb.rotation.x = THREE.MathUtils.damp(limb.rotation.x, falling ? side * (0.68 + fallWave * 0.32) : braking ? side * (0.52 + brakeTremor) : side * Math.abs(diagonal) * 0.34, 20, delta)
@@ -314,7 +358,7 @@ function AssetCharacter({ id, x, braking, phase, velocity }: { id: CharacterId; 
   )
 }
 
-function LowPolyPenguin({ x, braking, phase, velocity }: { x: number; braking: boolean; phase: GamePhase; velocity: number }) {
+export function LowPolyPenguin({ x, braking, phase, velocity }: { x: number; braking: boolean; phase: GamePhase; velocity: number }) {
   const group = useRef<THREE.Group>(null)
   const wingBack = useRef<THREE.Mesh>(null)
   const wingFront = useRef<THREE.Mesh>(null)
@@ -374,10 +418,11 @@ function LowPolyPenguin({ x, braking, phase, velocity }: { x: number; braking: b
     }
 
     if (wingBack.current && wingFront.current && footBack.current && footFront.current) {
-      const brakeTremor = braking && brakeAge > 0.18 ? Math.sin(brakeAge * 30) * 0.08 : 0
+      const brakeTremor = braking && brakeAge > 0.18 ? Math.sin(brakeAge * 30) * 0.05 : 0
+      const brakeWingSwing = braking ? Math.sin(Math.max(0, brakeAge - 0.08) * 12.1) * 0.28 * brakePunch : 0
       const wingSwing = moving ? rhythm * 0.68 : idle ? Math.sin(time * 1.9) * 0.12 : readyCrouch * 0.2
-      wingBack.current.rotation.z = THREE.MathUtils.damp(wingBack.current.rotation.z, falling ? 1.28 + fallWave * 0.34 : braking ? 1.3 + brakeTremor : 0.56 + wingSwing, 22, delta)
-      wingFront.current.rotation.z = THREE.MathUtils.damp(wingFront.current.rotation.z, falling ? -1.28 + fallWave * 0.34 : braking ? -1.3 - brakeTremor : -0.56 - wingSwing, 22, delta)
+      wingBack.current.rotation.z = THREE.MathUtils.damp(wingBack.current.rotation.z, falling ? 1.28 + fallWave * 0.34 : braking ? 1.08 + brakeWingSwing + brakeTremor : 0.56 + wingSwing, 22, delta)
+      wingFront.current.rotation.z = THREE.MathUtils.damp(wingFront.current.rotation.z, falling ? -1.28 + fallWave * 0.34 : braking ? -1.08 + brakeWingSwing - brakeTremor : -0.56 - wingSwing, 22, delta)
       footBack.current.position.x = THREE.MathUtils.damp(footBack.current.position.x, falling ? -0.58 - fallWave * 0.2 : -0.24 + (moving ? Math.max(0, rhythm) * -0.5 : braking ? -0.24 : 0), 22, delta)
       footFront.current.position.x = THREE.MathUtils.damp(footFront.current.position.x, falling ? 0.68 - fallWave * 0.2 : 0.34 + (moving ? Math.max(0, -rhythm) * -0.5 : braking ? 0.4 : 0), 22, delta)
       footBack.current.rotation.z = THREE.MathUtils.damp(footBack.current.rotation.z, falling ? -0.72 - fallWave * 0.42 : moving ? -Math.max(0, rhythm) * 0.62 : braking ? -0.52 - brakeTremor : 0, 22, delta)
@@ -677,15 +722,16 @@ function OceanDetails({ cliffX }: { cliffX: number }) {
   )
 }
 
-const SHATTER_PALETTES: Record<CharacterId, string[]> = {
-  penguin: [C.ink, C.cream, C.orange, '#263b44', '#f6f2df'],
-  kid: ['#6f3e24', '#d79967', '#2f9f98', '#315477', '#f0cf9f'],
-  granny: ['#d8d2c6', '#d39a73', '#8e5fa0', '#4b5c75', '#eee8dc'],
-  businessman: ['#4a3023', '#c98b62', '#28465f', '#17272d', '#d6b87b'],
-  fox: ['#c96d35', '#f4d8af', '#8b3e28', '#392d2a', '#fff1d2'],
-  frog: ['#4e9d62', '#a9d56c', '#2d6847', '#e8cf6e', '#eff6cf'],
-  bear: ['#76513b', '#a47755', '#4f392f', '#d6b28a', '#efe1c7'],
-}
+const SHATTER_PALETTES = {
+  people: ['#6f3e24', '#d79967', '#2f9f98', '#315477', '#f0cf9f'],
+  archetypes: ['#263b44', '#d79967', '#d8534f', '#3f79a7', '#f0cf9f'],
+  monsters: ['#293637', '#9cad87', '#775165', '#d7d4c5', '#4e7164'],
+  office: ['#4a3023', '#c98b62', '#28465f', '#3f8f88', '#d6b87b'],
+  villains: ['#1d2b30', '#41515a', '#6f553f', '#b78f55', '#d8d2c6'],
+  mechs: ['#1b2428', '#3b464b', '#f3a83b', '#9b5a33', '#d5d9d6'],
+  mythic: ['#6b422c', '#9b704d', '#3f8f88', '#e4d7bb', '#3b2922'],
+  animals: ['#76513b', '#c96d35', '#f4d8af', '#4e9d62', '#eff6cf'],
+} as const
 
 const SHATTER_LAYOUT = [
   [-0.2, 1.62, -0.18, 0.28, 0], [0.2, 1.62, -0.18, 0.28, 1],
@@ -701,7 +747,7 @@ function CharacterShatter({ x, characterId }: { x: number; characterId: Characte
   const pieces = useRef<THREE.Mesh[]>([])
   const startedAt = useRef(performance.now())
   const reduceMotion = useMemo(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches, [])
-  const palette = SHATTER_PALETTES[characterId]
+  const palette = SHATTER_PALETTES[CHARACTER_BY_ID[characterId].category]
 
   useFrame(() => {
     const elapsed = THREE.MathUtils.clamp((performance.now() - startedAt.current) / 1250, 0, 1)
@@ -777,9 +823,7 @@ function World({ x, cliffX, braking, phase, rating, characterId, velocity, weath
       </mesh>
 
       <IcePlatform cliffX={cliffX} rating={rating} />
-      {characterId === 'penguin'
-        ? <LowPolyPenguin x={x} braking={braking} phase={phase} velocity={velocity} />
-        : <AssetCharacter id={characterId} x={x} braking={braking} phase={phase} velocity={velocity} />}
+      <AssetCharacter id={characterId} x={x} braking={braking} phase={phase} velocity={velocity} />
       {(phase === 'falling' || phase === 'gameover') && <CharacterShatter x={x} characterId={characterId} />}
       <SnowSpray x={x} active={braking && phase === 'playing'} />
       <EdgeCrystals cliffX={cliffX} visible={phase === 'result' && rating === 'edge'} />
@@ -803,7 +847,11 @@ function World({ x, cliffX, braking, phase, rating, characterId, velocity, weath
   )
 }
 
-export default function EdgeBrakeScene(props: { x: number; cliffX: number; braking: boolean; phase: GamePhase; rating: Rating | null; characterId: CharacterId; velocity: number; weather: WeatherKind }) {
+export default function EdgeBrakeScene(props: { x: number; cliffX: number; braking: boolean; phase: GamePhase; rating: Rating | null; characterId: CharacterId; preloadCharacterId?: CharacterId; velocity: number; weather: WeatherKind }) {
+  useEffect(() => {
+    useGLTF.preload(CHARACTER_BY_ID[props.preloadCharacterId ?? nextRosterCharacter(props.characterId).id].modelUrl)
+  }, [props.characterId, props.preloadCharacterId])
+
   return (
     <Canvas
       className="eb-scene"

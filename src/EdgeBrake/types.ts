@@ -1,11 +1,11 @@
 export const FIELD_W = 390
 export const FIELD_H = 700
 export const PENGUIN_W = 58
-export const PENGUIN_FRONT = 49
+export const CHARACTER_FRONT = 49
 
 export type GamePhase = 'cover' | 'awaiting' | 'ready' | 'playing' | 'result' | 'falling' | 'gameover'
 export type Rating = 'edge' | 'great' | 'safe' | 'early'
-export type CharacterId = 'penguin' | 'kid' | 'granny' | 'businessman' | 'fox' | 'frog' | 'bear'
+export type CharacterId = string
 export type WeatherKind = 'clear' | 'snow' | 'fog' | 'blizzard'
 
 export interface RoundResult {
@@ -13,6 +13,7 @@ export interface RoundResult {
   rating: Rating
   points: number
   coins: number
+  passed: boolean
 }
 
 export interface ViewState {

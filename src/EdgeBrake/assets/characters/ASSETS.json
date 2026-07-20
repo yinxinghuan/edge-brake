@@ -1,0 +1,2428 @@
+{
+  "$doc": "Low-Poly 3D asset inventory. Every entry uses the same portable contract: transparent PNG sprite + binary GLB.",
+  "design_system": "DESIGN_SYSTEM.md",
+  "catalog": "catalog/catalog.json",
+  "exporter": "export.html",
+  "format": "sprite+glb/v1",
+  "family_accent": "0x3fb6ac",
+  "grid": 0.125,
+  "visual_language": "flat-shaded vector-voxel, orthographic iso, locked 3-value lighting, single teal accent family",
+  "count": 86,
+  "categories": {
+    "people": {
+      "label": "人物",
+      "count": 15,
+      "note": "FAMILY B 锐利立方等距。比例锁：head:torso:legs ≈ 1:1.3:1.5，head 宽 ≈ 0.56×torso，肩越过脖子。配色纪律：每人 = 肤+发+2 低饱和服装 + 唯一 teal 强调(围裙/手风琴/领口/腰带)。多元：4 肤色(skin/skinD/skinTan/skinDk) × 多发色 × 童/壮/常体型 × 多职业"
+    },
+    "archetypes": {
+      "label": "职业 + 流行文化",
+      "count": 11,
+      "note": "Crossy Road / 文化漫画 caricature 寄存器(怪物 bar)。每角色 = specific 文化引用 + 饱和多色 + caricature 标志 prop + bespoke 几何 + silhouette extender。区别于 people category 的 civilian 微变寄存器(灰化色 + 单 teal accent)。同 ~2.5u 比例可与 people/monsters 混排。完整设计 framework 见 memory feedback_voxel_cultural_caricature_bar。"
+    },
+    "monsters": {
+      "label": "怪物",
+      "count": 6,
+      "note": "阴森/重口寄存器(惨白/干血/露骨/腐烂/发光眼)，独立剪影非'人套戏服'。与 people 同 ~2.5u 比例 + 同舞台灯光，两套可同场景混排。物种特征前突 ≥0.25u，缩略图可读。发光眼走 emissive。可跨游戏复用(after-dark 主题)"
+    },
+    "office": {
+      "label": "办公室职业",
+      "count": 5,
+      "note": "高管、外卖员、清洁工、咖啡师与保安的专属模型。"
+    },
+    "villains": {
+      "label": "精英角色",
+      "count": 2,
+      "note": "战术与历史战士类精英角色。"
+    },
+    "mechs": {
+      "label": "机甲",
+      "count": 1,
+      "note": "非人形材质与机械剪影的可复用角色。"
+    },
+    "mythic": {
+      "label": "神话角色",
+      "count": 1,
+      "note": "神话生物与大型武器剪影。"
+    },
+    "animals": {
+      "label": "动物",
+      "count": 11,
+      "note": "抽取完成：quadruped()/chicken()/frog()/duck() + ANIMALS roster。crossy_lab.html 改薄，色卡布局保留为 crossy 专属。评审纪律：物种特征(耳/角/冠/眼)必须 ≥0.25u 且前突，否则缩略图读不出"
+    },
+    "props": {
+      "label": "物品/道具",
+      "count": 8,
+      "note": "场景可复用交互道具。"
+    },
+    "goods": {
+      "label": "货品",
+      "count": 12,
+      "note": "零售商品 SKU 一打：每种凭剪影即可辨认(瓶/罐/袋/盒/水果堆/蛋筒/山墙纸盒/叶菜/细高拉环罐 + After Dark 三件血袋/带骨生肉/脑花)。~0.5u 桌面级小件，配 props 货架/冰柜/筐使用。product(kind,col) 工厂可按品类着色任意 SKU。可跨游戏复用(商店/市场/厨房)。"
+    },
+    "plants": {
+      "label": "植物/自然",
+      "count": 7,
+      "note": "植物、岩石和盆栽。"
+    },
+    "scene": {
+      "label": "场景/环境地块",
+      "count": 7,
+      "note": "地块、建筑和场景结构。"
+    }
+  },
+  "assets": [
+    {
+      "category": "people",
+      "id": "shopkeeper",
+      "name_zh": "店主",
+      "name_en": "Shopkeeper",
+      "tags": [
+        "shopkeeper",
+        "person",
+        "character",
+        "human",
+        "clerk",
+        "apron",
+        "store"
+      ],
+      "footprint": [
+        1.52,
+        2.79,
+        0.625
+      ],
+      "accent": true,
+      "hero": "teal 围裙 + 奶油 T + 压灰牛仔裤",
+      "format": "sprite+glb/v1",
+      "rig": {
+        "version": 1,
+        "nodes": [
+          "rig_legL",
+          "rig_legR",
+          "rig_armL",
+          "rig_armR"
+        ]
+      },
+      "sprite": "assets/sprites/people__shopkeeper.png",
+      "glb": "assets/gltf/people__shopkeeper.glb"
+    },
+    {
+      "category": "people",
+      "id": "granny",
+      "name_zh": "老奶奶",
+      "name_en": "Granny",
+      "tags": [
+        "granny",
+        "grandma",
+        "person",
+        "character",
+        "human",
+        "elderly",
+        "glasses",
+        "bun"
+      ],
+      "footprint": [
+        1.52,
+        2.98,
+        0.575
+      ],
+      "accent": true,
+      "hero": "压灰绿开衫 + 压灰珊瑚裙 + 发髻 + 眼镜 + teal 领口",
+      "format": "sprite+glb/v1",
+      "rig": {
+        "version": 1,
+        "nodes": [
+          "rig_legL",
+          "rig_legR",
+          "rig_armL",
+          "rig_armR"
+        ]
+      },
+      "sprite": "assets/sprites/people__granny.png",
+      "glb": "assets/gltf/people__granny.glb"
+    },
+    {
+      "category": "people",
+      "id": "oldman",
+      "name_zh": "老爷爷",
+      "name_en": "Old man",
+      "tags": [
+        "oldman",
+        "grandpa",
+        "person",
+        "character",
+        "human",
+        "elderly",
+        "glasses",
+        "accordion",
+        "musician"
+      ],
+      "footprint": [
+        1.52,
+        2.79,
+        1
+      ],
+      "accent": true,
+      "hero": "石灰毛衣 + 木色裤 + 眼镜 + teal 手风琴(hero)",
+      "format": "sprite+glb/v1",
+      "rig": {
+        "version": 1,
+        "nodes": [
+          "rig_legL",
+          "rig_legR",
+          "rig_armL",
+          "rig_armR"
+        ]
+      },
+      "sprite": "assets/sprites/people__oldman.png",
+      "glb": "assets/gltf/people__oldman.glb"
+    },
+    {
+      "category": "people",
+      "id": "blonde",
+      "name_zh": "金发女",
+      "name_en": "Blonde woman",
+      "tags": [
+        "blonde",
+        "woman",
+        "person",
+        "character",
+        "human",
+        "dress",
+        "lady"
+      ],
+      "footprint": [
+        1.52,
+        2.83,
+        0.615
+      ],
+      "accent": true,
+      "hero": "压灰蓝连衣裙 + 奶油领 + teal 腰带",
+      "format": "sprite+glb/v1",
+      "rig": {
+        "version": 1,
+        "nodes": [
+          "rig_legL",
+          "rig_legR",
+          "rig_armL",
+          "rig_armR"
+        ]
+      },
+      "sprite": "assets/sprites/people__blonde.png",
+      "glb": "assets/gltf/people__blonde.glb"
+    },
+    {
+      "category": "people",
+      "id": "kid",
+      "name_zh": "小孩",
+      "name_en": "Kid",
+      "tags": [
+        "kid",
+        "child",
+        "boy",
+        "person",
+        "character",
+        "human",
+        "backpack",
+        "school"
+      ],
+      "footprint": [
+        1.3,
+        2.17,
+        0.8
+      ],
+      "accent": true,
+      "hero": "矮身型 + 压灰橙 T + teal 书包(双肩带)",
+      "format": "sprite+glb/v1",
+      "rig": {
+        "version": 1,
+        "nodes": [
+          "rig_legL",
+          "rig_legR",
+          "rig_armL",
+          "rig_armR"
+        ]
+      },
+      "sprite": "assets/sprites/people__kid.png",
+      "glb": "assets/gltf/people__kid.glb"
+    },
+    {
+      "category": "people",
+      "id": "businessman",
+      "name_zh": "商务男",
+      "name_en": "Businessman",
+      "tags": [
+        "businessman",
+        "man",
+        "person",
+        "character",
+        "human",
+        "suit",
+        "tie",
+        "office",
+        "dark-skin"
+      ],
+      "footprint": [
+        1.6,
+        2.79,
+        0.62
+      ],
+      "accent": true,
+      "hero": "深肤 + 石板灰西装 + 奶油领 + teal 领带",
+      "format": "sprite+glb/v1",
+      "rig": {
+        "version": 1,
+        "nodes": [
+          "rig_legL",
+          "rig_legR",
+          "rig_armL",
+          "rig_armR"
+        ]
+      },
+      "sprite": "assets/sprites/people__businessman.png",
+      "glb": "assets/gltf/people__businessman.glb"
+    },
+    {
+      "category": "people",
+      "id": "officeWoman",
+      "name_zh": "职场女",
+      "name_en": "Office woman",
+      "tags": [
+        "officeWoman",
+        "woman",
+        "person",
+        "character",
+        "human",
+        "office",
+        "skirt",
+        "professional"
+      ],
+      "footprint": [
+        1.52,
+        2.83,
+        0.615
+      ],
+      "accent": true,
+      "hero": "压灰紫上衣 + 灰裙 + teal 领口",
+      "format": "sprite+glb/v1",
+      "rig": {
+        "version": 1,
+        "nodes": [
+          "rig_legL",
+          "rig_legR",
+          "rig_armL",
+          "rig_armR"
+        ]
+      },
+      "sprite": "assets/sprites/people__officeWoman.png",
+      "glb": "assets/gltf/people__officeWoman.glb"
+    },
+    {
+      "category": "people",
+      "id": "student",
+      "name_zh": "学生",
+      "name_en": "Student",
+      "tags": [
+        "student",
+        "person",
+        "character",
+        "human",
+        "backpack",
+        "school",
+        "youth",
+        "tan-skin"
+      ],
+      "footprint": [
+        1.52,
+        2.79,
+        0.8
+      ],
+      "accent": true,
+      "hero": "棕褐肤 + 压灰绿卫衣 + teal 书包",
+      "format": "sprite+glb/v1",
+      "rig": {
+        "version": 1,
+        "nodes": [
+          "rig_legL",
+          "rig_legR",
+          "rig_armL",
+          "rig_armR"
+        ]
+      },
+      "sprite": "assets/sprites/people__student.png",
+      "glb": "assets/gltf/people__student.glb"
+    },
+    {
+      "category": "people",
+      "id": "darkWoman",
+      "name_zh": "深肤女",
+      "name_en": "Dark-skin woman",
+      "tags": [
+        "darkWoman",
+        "woman",
+        "person",
+        "character",
+        "human",
+        "dress",
+        "dark-skin",
+        "bun",
+        "diverse"
+      ],
+      "footprint": [
+        1.52,
+        2.98,
+        0.575
+      ],
+      "accent": true,
+      "hero": "深肤 + 压灰珊瑚连衣裙 + 发髻 + teal 领口",
+      "format": "sprite+glb/v1",
+      "rig": {
+        "version": 1,
+        "nodes": [
+          "rig_legL",
+          "rig_legR",
+          "rig_armL",
+          "rig_armR"
+        ]
+      },
+      "sprite": "assets/sprites/people__darkWoman.png",
+      "glb": "assets/gltf/people__darkWoman.glb"
+    },
+    {
+      "category": "people",
+      "id": "worker",
+      "name_zh": "工人",
+      "name_en": "Worker",
+      "tags": [
+        "worker",
+        "man",
+        "person",
+        "character",
+        "human",
+        "hardhat",
+        "construction",
+        "labor",
+        "dark-skin"
+      ],
+      "footprint": [
+        1.56,
+        2.79,
+        0.75
+      ],
+      "accent": true,
+      "hero": "深肤 + 石灰工装 + 红安全帽 + teal 腰带",
+      "format": "sprite+glb/v1",
+      "rig": {
+        "version": 1,
+        "nodes": [
+          "rig_legL",
+          "rig_legR",
+          "rig_armL",
+          "rig_armR"
+        ]
+      },
+      "sprite": "assets/sprites/people__worker.png",
+      "glb": "assets/gltf/people__worker.glb"
+    },
+    {
+      "category": "people",
+      "id": "teen",
+      "name_zh": "少年",
+      "name_en": "Teen",
+      "tags": [
+        "teen",
+        "person",
+        "character",
+        "human",
+        "student",
+        "hoodie",
+        "cap",
+        "youth"
+      ],
+      "footprint": [
+        1.44,
+        2.59,
+        0.75
+      ],
+      "accent": true,
+      "hero": "棕褐肤 + 压灰红卫衣 + 金发 + teal 帽 + 矮身型",
+      "format": "sprite+glb/v1",
+      "rig": {
+        "version": 1,
+        "nodes": [
+          "rig_legL",
+          "rig_legR",
+          "rig_armL",
+          "rig_armR"
+        ]
+      },
+      "sprite": "assets/sprites/people__teen.png",
+      "glb": "assets/gltf/people__teen.glb"
+    },
+    {
+      "category": "people",
+      "id": "fitWoman",
+      "name_zh": "健身女",
+      "name_en": "Fit Woman",
+      "tags": [
+        "fitWoman",
+        "person",
+        "character",
+        "human",
+        "athlete",
+        "tank",
+        "sporty",
+        "woman"
+      ],
+      "footprint": [
+        1.52,
+        2.94,
+        0.57
+      ],
+      "accent": true,
+      "hero": "深肤 + 裸臂运动背心 + 压灰珊瑚/紫 + 发髻 + teal 腰带",
+      "format": "sprite+glb/v1",
+      "rig": {
+        "version": 1,
+        "nodes": [
+          "rig_legL",
+          "rig_legR",
+          "rig_armL",
+          "rig_armR"
+        ]
+      },
+      "sprite": "assets/sprites/people__fitWoman.png",
+      "glb": "assets/gltf/people__fitWoman.glb"
+    },
+    {
+      "category": "people",
+      "id": "chef",
+      "name_zh": "厨师",
+      "name_en": "Chef",
+      "tags": [
+        "chef",
+        "person",
+        "character",
+        "human",
+        "cook",
+        "uniform",
+        "hat",
+        "kitchen"
+      ],
+      "footprint": [
+        1.52,
+        2.79,
+        0.75
+      ],
+      "accent": true,
+      "hero": "白厨服 + 石板灰裤 + 奶油厨帽 + teal 领巾",
+      "format": "sprite+glb/v1",
+      "rig": {
+        "version": 1,
+        "nodes": [
+          "rig_legL",
+          "rig_legR",
+          "rig_armL",
+          "rig_armR"
+        ]
+      },
+      "sprite": "assets/sprites/people__chef.png",
+      "glb": "assets/gltf/people__chef.glb"
+    },
+    {
+      "category": "people",
+      "id": "bigGuy",
+      "name_zh": "壮汉",
+      "name_en": "Big Guy",
+      "tags": [
+        "bigGuy",
+        "person",
+        "character",
+        "human",
+        "broad",
+        "glasses",
+        "large",
+        "man"
+      ],
+      "footprint": [
+        1.62,
+        2.79,
+        0.62
+      ],
+      "accent": true,
+      "hero": "宽体 + 深肤 + 灰发眼镜 + 压灰绿 T + 木色裤 + teal 腰带",
+      "format": "sprite+glb/v1",
+      "rig": {
+        "version": 1,
+        "nodes": [
+          "rig_legL",
+          "rig_legR",
+          "rig_armL",
+          "rig_armR"
+        ]
+      },
+      "sprite": "assets/sprites/people__bigGuy.png",
+      "glb": "assets/gltf/people__bigGuy.glb"
+    },
+    {
+      "category": "people",
+      "id": "commuter",
+      "name_zh": "通勤者",
+      "name_en": "Commuter",
+      "tags": [
+        "commuter",
+        "people",
+        "human"
+      ],
+      "footprint": [
+        1.52,
+        2.79,
+        0.838
+      ],
+      "accent": true,
+      "hero": "黄褐通勤夹克 + teal 双肩包 + 胸前交通卡",
+      "format": "sprite+glb/v1",
+      "rig": {
+        "version": 1,
+        "nodes": [
+          "rig_legL",
+          "rig_legR",
+          "rig_armL",
+          "rig_armR"
+        ]
+      },
+      "sprite": "assets/sprites/people__commuter.png",
+      "glb": "assets/gltf/people__commuter.glb"
+    },
+    {
+      "category": "archetypes",
+      "id": "cop",
+      "name_zh": "甜甜圈 NYPD",
+      "name_en": "cop",
+      "tags": [
+        "archetype",
+        "person",
+        "crossy-road-caricature",
+        "accent-teal",
+        "silhouette-driven"
+      ],
+      "footprint": [
+        1.74,
+        2.75,
+        1.215
+      ],
+      "accent": true,
+      "hero": "鲜蓝制服 + 大金星徽 + 大肚凸 + 八字胡 + 蛤蟆镜 + 手举粉甜甜圈 + 高 trooper cap",
+      "format": "sprite+glb/v1",
+      "rig": {
+        "version": 1,
+        "nodes": [
+          "rig_legL",
+          "rig_legR",
+          "rig_armL",
+          "rig_armR"
+        ]
+      },
+      "sprite": "assets/sprites/archetypes__cop.png",
+      "glb": "assets/gltf/archetypes__cop.glb"
+    },
+    {
+      "category": "archetypes",
+      "id": "nurse",
+      "name_zh": "WWII pin-up 护士",
+      "name_en": "nurse",
+      "tags": [
+        "archetype",
+        "person",
+        "crossy-road-caricature",
+        "accent-teal",
+        "silhouette-driven"
+      ],
+      "footprint": [
+        1.3,
+        2.931,
+        0.575
+      ],
+      "accent": true,
+      "hero": "鲜白裙 + 胸前大红十字 + 翼帽(顶上两片白翼) + 红披肩 + 红唇 + 红鞋",
+      "format": "sprite+glb/v1",
+      "rig": {
+        "version": 1,
+        "nodes": [
+          "rig_legL",
+          "rig_legR",
+          "rig_armL",
+          "rig_armR"
+        ]
+      },
+      "sprite": "assets/sprites/archetypes__nurse.png",
+      "glb": "assets/gltf/archetypes__nurse.glb"
+    },
+    {
+      "category": "archetypes",
+      "id": "firefighter",
+      "name_zh": "FDNY 英雄",
+      "name_en": "firefighter",
+      "tags": [
+        "archetype",
+        "person",
+        "crossy-road-caricature",
+        "accent-teal",
+        "silhouette-driven"
+      ],
+      "footprint": [
+        1.8,
+        2.93,
+        0.95
+      ],
+      "accent": true,
+      "hero": "鲜金黄 turnout + 鲜红盔(后翻檐+前盾) + 蛇形水管缠肩 + 美国国旗补丁 + 大胡子",
+      "format": "sprite+glb/v1",
+      "rig": {
+        "version": 1,
+        "nodes": [
+          "rig_legL",
+          "rig_legR",
+          "rig_armL",
+          "rig_armR"
+        ]
+      },
+      "sprite": "assets/sprites/archetypes__firefighter.png",
+      "glb": "assets/gltf/archetypes__firefighter.glb"
+    },
+    {
+      "category": "archetypes",
+      "id": "construction",
+      "name_zh": "Village People macho",
+      "name_en": "construction",
+      "tags": [
+        "archetype",
+        "person",
+        "crossy-road-caricature",
+        "accent-teal",
+        "silhouette-driven"
+      ],
+      "footprint": [
+        1.8,
+        2.85,
+        0.77
+      ],
+      "accent": true,
+      "hero": "鲜橙露臂背心 + 大棕胡 + 黄安全帽(带头灯) + 鲜蓝牛仔裤 + 巨臂",
+      "format": "sprite+glb/v1",
+      "rig": {
+        "version": 1,
+        "nodes": [
+          "rig_legL",
+          "rig_legR",
+          "rig_armL",
+          "rig_armR"
+        ]
+      },
+      "sprite": "assets/sprites/archetypes__construction.png",
+      "glb": "assets/gltf/archetypes__construction.glb"
+    },
+    {
+      "category": "archetypes",
+      "id": "delivery",
+      "name_zh": "复古 Newsies 报童",
+      "name_en": "delivery",
+      "tags": [
+        "archetype",
+        "person",
+        "crossy-road-caricature",
+        "accent-teal",
+        "silhouette-driven"
+      ],
+      "footprint": [
+        1.41,
+        2.6,
+        0.68
+      ],
+      "accent": true,
+      "hero": "扁平 newsboy 帽 + 斜挎皮报袋插报纸 + 鲜红毛衣 + 短裤 + 飞镜上额",
+      "format": "sprite+glb/v1",
+      "rig": {
+        "version": 1,
+        "nodes": [
+          "rig_legL",
+          "rig_legR",
+          "rig_armL",
+          "rig_armR"
+        ]
+      },
+      "sprite": "assets/sprites/archetypes__delivery.png",
+      "glb": "assets/gltf/archetypes__delivery.glb"
+    },
+    {
+      "category": "archetypes",
+      "id": "cowboy",
+      "name_zh": "Clint Eastwood 镖客",
+      "name_en": "cowboy",
+      "tags": [
+        "archetype",
+        "person",
+        "crossy-road-caricature",
+        "accent-teal",
+        "silhouette-driven"
+      ],
+      "footprint": [
+        1.66,
+        3,
+        1.06
+      ],
+      "accent": true,
+      "hero": "棕长 duster 风衣拖在身后 + 巨 Stetson 圆盘 + 彩条 poncho 披肩 + 嘴叼雪茄发红光 + 眯眼",
+      "format": "sprite+glb/v1",
+      "rig": {
+        "version": 1,
+        "nodes": [
+          "rig_legL",
+          "rig_legR",
+          "rig_armL",
+          "rig_armR"
+        ]
+      },
+      "sprite": "assets/sprites/archetypes__cowboy.png",
+      "glb": "assets/gltf/archetypes__cowboy.glb"
+    },
+    {
+      "category": "archetypes",
+      "id": "punk",
+      "name_zh": "Sid Vicious 1977",
+      "name_en": "punk",
+      "tags": [
+        "archetype",
+        "person",
+        "crossy-road-caricature",
+        "accent-teal",
+        "silhouette-driven"
+      ],
+      "footprint": [
+        1.26,
+        3.77,
+        0.52
+      ],
+      "accent": true,
+      "hero": "极瘦极高 + 巨高青色发光莫西干 + 钉肩 + 钉皮夹克 + 钱包链垂",
+      "format": "sprite+glb/v1",
+      "rig": {
+        "version": 1,
+        "nodes": [
+          "rig_legL",
+          "rig_legR",
+          "rig_armL",
+          "rig_armR"
+        ]
+      },
+      "sprite": "assets/sprites/archetypes__punk.png",
+      "glb": "assets/gltf/archetypes__punk.glb"
+    },
+    {
+      "category": "archetypes",
+      "id": "rapper",
+      "name_zh": "Notorious B.I.G.",
+      "name_en": "rapper",
+      "tags": [
+        "archetype",
+        "person",
+        "crossy-road-caricature",
+        "accent-teal",
+        "silhouette-driven"
+      ],
+      "footprint": [
+        2.01,
+        2.85,
+        0.93
+      ],
+      "accent": true,
+      "hero": "鲜红运动套带白条 + 巨金名牌粗链 + 紫色头巾露 + 反戴 cap + 黄 Timberland 大靴",
+      "format": "sprite+glb/v1",
+      "rig": {
+        "version": 1,
+        "nodes": [
+          "rig_legL",
+          "rig_legR",
+          "rig_armL",
+          "rig_armR"
+        ]
+      },
+      "sprite": "assets/sprites/archetypes__rapper.png",
+      "glb": "assets/gltf/archetypes__rapper.glb"
+    },
+    {
+      "category": "archetypes",
+      "id": "biker",
+      "name_zh": "Fonzie / Brando Wild One",
+      "name_en": "biker",
+      "tags": [
+        "archetype",
+        "person",
+        "crossy-road-caricature",
+        "accent-teal",
+        "silhouette-driven"
+      ],
+      "footprint": [
+        1.68,
+        3.13,
+        0.67
+      ],
+      "accent": true,
+      "hero": "不戴盔 + 抹光 pompadour + 嘴叼烟 + 鬓角 + 立领皮夹克 + 白 T 露领 + 卷裤脚",
+      "format": "sprite+glb/v1",
+      "rig": {
+        "version": 1,
+        "nodes": [
+          "rig_legL",
+          "rig_legR",
+          "rig_armL",
+          "rig_armR"
+        ]
+      },
+      "sprite": "assets/sprites/archetypes__biker.png",
+      "glb": "assets/gltf/archetypes__biker.glb"
+    },
+    {
+      "category": "archetypes",
+      "id": "goth",
+      "name_zh": "Morticia Addams",
+      "name_en": "goth",
+      "tags": [
+        "archetype",
+        "person",
+        "crossy-road-caricature",
+        "accent-teal",
+        "silhouette-driven"
+      ],
+      "footprint": [
+        1.4,
+        2.85,
+        0.618
+      ],
+      "accent": true,
+      "hero": "苍白 + 长袖喇叭尾 + 长黑裙 + 长发披胸 + 喉锁 + 青十字发光",
+      "format": "sprite+glb/v1",
+      "rig": {
+        "version": 1,
+        "nodes": [
+          "rig_legL",
+          "rig_legR",
+          "rig_armL",
+          "rig_armR"
+        ]
+      },
+      "sprite": "assets/sprites/archetypes__goth.png",
+      "glb": "assets/gltf/archetypes__goth.glb"
+    },
+    {
+      "category": "archetypes",
+      "id": "paramedic",
+      "name_zh": "急救员",
+      "name_en": "Paramedic",
+      "tags": [
+        "paramedic",
+        "archetypes",
+        "human"
+      ],
+      "footprint": [
+        1.56,
+        2.81,
+        0.82
+      ],
+      "accent": true,
+      "hero": "EMS 头盔 + 医疗包 + 听诊器 + 对讲机",
+      "format": "sprite+glb/v1",
+      "rig": {
+        "version": 1,
+        "nodes": [
+          "rig_legL",
+          "rig_legR",
+          "rig_armL",
+          "rig_armR"
+        ]
+      },
+      "sprite": "assets/sprites/archetypes__paramedic.png",
+      "glb": "assets/gltf/archetypes__paramedic.glb"
+    },
+    {
+      "category": "monsters",
+      "id": "vampire",
+      "name_zh": "吸血鬼",
+      "name_en": "Vampire",
+      "tags": [
+        "vampire",
+        "monsters",
+        "monster"
+      ],
+      "footprint": [
+        1.34,
+        2.81,
+        0.61
+      ],
+      "accent": true,
+      "hero": "惨白凹脸 + 红发光眼 + 干血立领翼/披风 + 獠牙 + 美人尖",
+      "format": "sprite+glb/v1",
+      "rig": {
+        "version": 1,
+        "nodes": [
+          "rig_legL",
+          "rig_legR",
+          "rig_armL",
+          "rig_armR"
+        ]
+      },
+      "sprite": "assets/sprites/monsters__vampire.png",
+      "glb": "assets/gltf/monsters__vampire.glb"
+    },
+    {
+      "category": "monsters",
+      "id": "werewolf",
+      "name_zh": "狼人",
+      "name_en": "Werewolf",
+      "tags": [
+        "werewolf",
+        "monsters",
+        "monster"
+      ],
+      "footprint": [
+        1.72,
+        2.32,
+        1.658
+      ],
+      "accent": false,
+      "hero": "前倾驼背 + 前突口鼻 + 尖耳 + 爪 + 尾 + 黄发光眼",
+      "format": "sprite+glb/v1",
+      "rig": {
+        "version": 1,
+        "nodes": [
+          "rig_legL",
+          "rig_legR",
+          "rig_armL",
+          "rig_armR"
+        ]
+      },
+      "sprite": "assets/sprites/monsters__werewolf.png",
+      "glb": "assets/gltf/monsters__werewolf.glb"
+    },
+    {
+      "category": "monsters",
+      "id": "zombie",
+      "name_zh": "僵尸",
+      "name_en": "Zombie",
+      "tags": [
+        "zombie",
+        "monsters",
+        "monster"
+      ],
+      "footprint": [
+        1.42,
+        2.59,
+        1.296
+      ],
+      "accent": false,
+      "hero": "病绿烂肉 + 撕开露肋骨 + 垂下颚 + 前伸抓手",
+      "format": "sprite+glb/v1",
+      "rig": {
+        "version": 1,
+        "nodes": [
+          "rig_legL",
+          "rig_legR",
+          "rig_armL",
+          "rig_armR"
+        ]
+      },
+      "sprite": "assets/sprites/monsters__zombie.png",
+      "glb": "assets/gltf/monsters__zombie.glb"
+    },
+    {
+      "category": "monsters",
+      "id": "ghost",
+      "name_zh": "幽灵",
+      "name_en": "Ghost",
+      "tags": [
+        "ghost",
+        "monsters",
+        "monster"
+      ],
+      "footprint": [
+        1.419,
+        1.97,
+        0.535
+      ],
+      "accent": false,
+      "hero": "无腿飘带底 + 半透明 + 空洞脸/哀嚎口 + 内部冷光",
+      "format": "sprite+glb/v1",
+      "sprite": "assets/sprites/monsters__ghost.png",
+      "glb": "assets/gltf/monsters__ghost.glb"
+    },
+    {
+      "category": "monsters",
+      "id": "skeleton",
+      "name_zh": "骷髅",
+      "name_en": "Skeleton",
+      "tags": [
+        "skeleton",
+        "monsters",
+        "monster"
+      ],
+      "footprint": [
+        0.96,
+        2.7,
+        0.5
+      ],
+      "accent": false,
+      "hero": "裸骨肋笼/脊柱/盆骨 + 细骨四肢 + 眼窝牙列",
+      "format": "sprite+glb/v1",
+      "rig": {
+        "version": 1,
+        "nodes": [
+          "rig_legL",
+          "rig_legR",
+          "rig_armL",
+          "rig_armR"
+        ]
+      },
+      "sprite": "assets/sprites/monsters__skeleton.png",
+      "glb": "assets/gltf/monsters__skeleton.glb"
+    },
+    {
+      "category": "monsters",
+      "id": "mummy",
+      "name_zh": "木乃伊",
+      "name_en": "Mummy",
+      "tags": [
+        "mummy",
+        "monsters",
+        "monster"
+      ],
+      "footprint": [
+        1.42,
+        2.53,
+        1.222
+      ],
+      "accent": true,
+      "hero": "错位绷带缠绕 + 一只绿发光眼缝 + 拖地散绷带 + 前伸手",
+      "format": "sprite+glb/v1",
+      "rig": {
+        "version": 1,
+        "nodes": [
+          "rig_legL",
+          "rig_legR",
+          "rig_armL",
+          "rig_armR"
+        ]
+      },
+      "sprite": "assets/sprites/monsters__mummy.png",
+      "glb": "assets/gltf/monsters__mummy.glb"
+    },
+    {
+      "category": "office",
+      "id": "executive",
+      "name_zh": "高管",
+      "name_en": "Executive",
+      "tags": [
+        "executive",
+        "office",
+        "human"
+      ],
+      "footprint": [
+        1.785,
+        2.76,
+        0.655
+      ],
+      "accent": true,
+      "hero": "细条纹权力西装 + 红领带 + 金表 + 公文包",
+      "format": "sprite+glb/v1",
+      "rig": {
+        "version": 1,
+        "nodes": [
+          "rig_legL",
+          "rig_legR",
+          "rig_armL",
+          "rig_armR"
+        ]
+      },
+      "sprite": "assets/sprites/office__executive.png",
+      "glb": "assets/gltf/office__executive.glb"
+    },
+    {
+      "category": "office",
+      "id": "courier",
+      "name_zh": "外卖员",
+      "name_en": "Courier",
+      "tags": [
+        "courier",
+        "office",
+        "human"
+      ],
+      "footprint": [
+        1.46,
+        2.64,
+        1.421
+      ],
+      "accent": true,
+      "hero": "红色反光夹克 + 大型方形保温包 + 纸袋",
+      "format": "sprite+glb/v1",
+      "rig": {
+        "version": 1,
+        "nodes": [
+          "rig_legL",
+          "rig_legR",
+          "rig_armL",
+          "rig_armR"
+        ]
+      },
+      "sprite": "assets/sprites/office__courier.png",
+      "glb": "assets/gltf/office__courier.glb"
+    },
+    {
+      "category": "office",
+      "id": "janitor",
+      "name_zh": "清洁工",
+      "name_en": "Janitor",
+      "tags": [
+        "janitor",
+        "office",
+        "human"
+      ],
+      "footprint": [
+        1.66,
+        2.665,
+        0.715
+      ],
+      "accent": true,
+      "hero": "蓝色连体工装 + 黄手套 + 直立拖把",
+      "format": "sprite+glb/v1",
+      "rig": {
+        "version": 1,
+        "nodes": [
+          "rig_legL",
+          "rig_legR",
+          "rig_armL",
+          "rig_armR"
+        ]
+      },
+      "sprite": "assets/sprites/office__janitor.png",
+      "glb": "assets/gltf/office__janitor.glb"
+    },
+    {
+      "category": "office",
+      "id": "barista",
+      "name_zh": "咖啡师",
+      "name_en": "Barista",
+      "tags": [
+        "barista",
+        "office",
+        "human"
+      ],
+      "footprint": [
+        1.39,
+        2.63,
+        1.129
+      ],
+      "accent": true,
+      "hero": "针织帽 + 围裙 + 外带咖啡杯 + 耳后铅笔",
+      "format": "sprite+glb/v1",
+      "rig": {
+        "version": 1,
+        "nodes": [
+          "rig_legL",
+          "rig_legR",
+          "rig_armL",
+          "rig_armR"
+        ]
+      },
+      "sprite": "assets/sprites/office__barista.png",
+      "glb": "assets/gltf/office__barista.glb"
+    },
+    {
+      "category": "office",
+      "id": "securityGuard",
+      "name_zh": "保安",
+      "name_en": "Security guard",
+      "tags": [
+        "securityGuard",
+        "office",
+        "human"
+      ],
+      "footprint": [
+        1.56,
+        2.81,
+        0.78
+      ],
+      "accent": true,
+      "hero": "深蓝制服 + 大檐帽 + 墨镜 + 对讲机 + 手电筒",
+      "format": "sprite+glb/v1",
+      "rig": {
+        "version": 1,
+        "nodes": [
+          "rig_legL",
+          "rig_legR",
+          "rig_armL",
+          "rig_armR"
+        ]
+      },
+      "sprite": "assets/sprites/office__securityGuard.png",
+      "glb": "assets/gltf/office__securityGuard.glb"
+    },
+    {
+      "category": "villains",
+      "id": "swat",
+      "name_zh": "特警",
+      "name_en": "SWAT",
+      "tags": [
+        "swat",
+        "villains",
+        "low-poly"
+      ],
+      "footprint": [
+        1.93,
+        2.93,
+        1.12
+      ],
+      "accent": true,
+      "hero": "战术护甲 + 防暴盾 + 步枪 + 面罩天线",
+      "format": "sprite+glb/v1",
+      "rig": {
+        "version": 1,
+        "nodes": [
+          "rig_legL",
+          "rig_legR",
+          "rig_armL",
+          "rig_armR"
+        ]
+      },
+      "sprite": "assets/sprites/villains__swat.png",
+      "glb": "assets/gltf/villains__swat.glb"
+    },
+    {
+      "category": "villains",
+      "id": "viking",
+      "name_zh": "维京战士",
+      "name_en": "Viking",
+      "tags": [
+        "viking",
+        "villains",
+        "low-poly"
+      ],
+      "footprint": [
+        1.97,
+        3.054,
+        1.44
+      ],
+      "accent": true,
+      "hero": "角盔 + 圆盾 + 战斧 + 大胡子",
+      "format": "sprite+glb/v1",
+      "rig": {
+        "version": 1,
+        "nodes": [
+          "rig_legL",
+          "rig_legR",
+          "rig_armL",
+          "rig_armR"
+        ]
+      },
+      "sprite": "assets/sprites/villains__viking.png",
+      "glb": "assets/gltf/villains__viking.glb"
+    },
+    {
+      "category": "mechs",
+      "id": "combatMech",
+      "name_zh": "战斗机甲",
+      "name_en": "Combat mech",
+      "tags": [
+        "combatMech",
+        "mechs",
+        "low-poly"
+      ],
+      "footprint": [
+        2.38,
+        3.14,
+        1.1
+      ],
+      "accent": true,
+      "hero": "炮钢机身 + 发光核心 + 双肩炮",
+      "format": "sprite+glb/v1",
+      "rig": {
+        "version": 1,
+        "nodes": [
+          "rig_legL",
+          "rig_legR",
+          "rig_armL",
+          "rig_armR"
+        ]
+      },
+      "sprite": "assets/sprites/mechs__combatMech.png",
+      "glb": "assets/gltf/mechs__combatMech.glb"
+    },
+    {
+      "category": "mythic",
+      "id": "minotaur",
+      "name_zh": "牛头人",
+      "name_en": "Minotaur",
+      "tags": [
+        "minotaur",
+        "mythic",
+        "low-poly"
+      ],
+      "footprint": [
+        2.04,
+        3.126,
+        1.84
+      ],
+      "accent": true,
+      "hero": "牛首宽体 + 巨角 + 双刃斧",
+      "format": "sprite+glb/v1",
+      "rig": {
+        "version": 1,
+        "nodes": [
+          "rig_legL",
+          "rig_legR",
+          "rig_armL",
+          "rig_armR"
+        ]
+      },
+      "sprite": "assets/sprites/mythic__minotaur.png",
+      "glb": "assets/gltf/mythic__minotaur.glb"
+    },
+    {
+      "category": "animals",
+      "id": "pig",
+      "name_zh": "猪",
+      "name_en": "Pig",
+      "tags": [
+        "pig",
+        "animal",
+        "farm",
+        "quadruped",
+        "cute"
+      ],
+      "footprint": [
+        2.145,
+        1.33,
+        0.92
+      ],
+      "accent": false,
+      "hero": "短粗 chibi + 卷尾 + 粉鼻盘",
+      "format": "sprite+glb/v1",
+      "sprite": "assets/sprites/animals__pig.png",
+      "glb": "assets/gltf/animals__pig.glb"
+    },
+    {
+      "category": "animals",
+      "id": "cow",
+      "name_zh": "牛",
+      "name_en": "Cow",
+      "tags": [
+        "cow",
+        "animal",
+        "farm",
+        "cattle",
+        "quadruped"
+      ],
+      "footprint": [
+        2.305,
+        1.46,
+        0.96
+      ],
+      "accent": false,
+      "hero": "2 大斑块 + 米色牛角",
+      "format": "sprite+glb/v1",
+      "sprite": "assets/sprites/animals__cow.png",
+      "glb": "assets/gltf/animals__cow.glb"
+    },
+    {
+      "category": "animals",
+      "id": "cat",
+      "name_zh": "猫",
+      "name_en": "Cat",
+      "tags": [
+        "cat",
+        "animal",
+        "pet",
+        "tabby",
+        "quadruped"
+      ],
+      "footprint": [
+        1.828,
+        1.37,
+        0.78
+      ],
+      "accent": false,
+      "hero": "灰虎斑 + 高尖耳 + 上翘卷尾(与狐狸区分)",
+      "format": "sprite+glb/v1",
+      "sprite": "assets/sprites/animals__cat.png",
+      "glb": "assets/gltf/animals__cat.glb"
+    },
+    {
+      "category": "animals",
+      "id": "fox",
+      "name_zh": "狐狸",
+      "name_en": "Fox",
+      "tags": [
+        "fox",
+        "animal",
+        "wild",
+        "orange",
+        "quadruped"
+      ],
+      "footprint": [
+        2.435,
+        1.29,
+        0.76
+      ],
+      "accent": false,
+      "hero": "橙身 + 白胸章 + 黑尖耳/袜 + 白尾尖",
+      "format": "sprite+glb/v1",
+      "sprite": "assets/sprites/animals__fox.png",
+      "glb": "assets/gltf/animals__fox.glb"
+    },
+    {
+      "category": "animals",
+      "id": "chicken",
+      "name_zh": "鸡",
+      "name_en": "Chicken",
+      "tags": [
+        "chicken",
+        "animal",
+        "farm",
+        "bird",
+        "hen"
+      ],
+      "footprint": [
+        1.21,
+        1.175,
+        0.98
+      ],
+      "accent": false,
+      "hero": "胖身 + 3 凸红冠 + 前突喙 + 肉垂",
+      "format": "sprite+glb/v1",
+      "sprite": "assets/sprites/animals__chicken.png",
+      "glb": "assets/gltf/animals__chicken.glb"
+    },
+    {
+      "category": "animals",
+      "id": "frog",
+      "name_zh": "青蛙",
+      "name_en": "Frog",
+      "tags": [
+        "frog",
+        "animal",
+        "amphibian",
+        "green",
+        "pond"
+      ],
+      "footprint": [
+        1.17,
+        0.77,
+        1.4
+      ],
+      "accent": false,
+      "hero": "大鼓眼 + 蹲姿",
+      "format": "sprite+glb/v1",
+      "sprite": "assets/sprites/animals__frog.png",
+      "glb": "assets/gltf/animals__frog.glb"
+    },
+    {
+      "category": "animals",
+      "id": "dog",
+      "name_zh": "狗",
+      "name_en": "Dog",
+      "tags": [
+        "dog",
+        "animal",
+        "pet",
+        "puppy",
+        "quadruped"
+      ],
+      "footprint": [
+        2.008,
+        1.15,
+        0.8
+      ],
+      "accent": false,
+      "hero": "棕身 + 白胸 + 立圆耳 + 竖尾白尖",
+      "format": "sprite+glb/v1",
+      "sprite": "assets/sprites/animals__dog.png",
+      "glb": "assets/gltf/animals__dog.glb"
+    },
+    {
+      "category": "animals",
+      "id": "sheep",
+      "name_zh": "羊",
+      "name_en": "Sheep",
+      "tags": [
+        "sheep",
+        "animal",
+        "farm",
+        "wool",
+        "lamb",
+        "quadruped"
+      ],
+      "footprint": [
+        1.86,
+        1.22,
+        0.92
+      ],
+      "accent": false,
+      "hero": "蓬白身 + 黑脸黑腿 + 卷尾",
+      "format": "sprite+glb/v1",
+      "sprite": "assets/sprites/animals__sheep.png",
+      "glb": "assets/gltf/animals__sheep.glb"
+    },
+    {
+      "category": "animals",
+      "id": "rabbit",
+      "name_zh": "兔",
+      "name_en": "Rabbit",
+      "tags": [
+        "rabbit",
+        "bunny",
+        "animal",
+        "pet",
+        "ears",
+        "quadruped"
+      ],
+      "footprint": [
+        1.64,
+        1.38,
+        0.74
+      ],
+      "accent": false,
+      "hero": "白身 + 超长立耳 + 白绒尾",
+      "format": "sprite+glb/v1",
+      "sprite": "assets/sprites/animals__rabbit.png",
+      "glb": "assets/gltf/animals__rabbit.glb"
+    },
+    {
+      "category": "animals",
+      "id": "bear",
+      "name_zh": "熊",
+      "name_en": "Bear",
+      "tags": [
+        "bear",
+        "animal",
+        "wild",
+        "forest",
+        "brown",
+        "quadruped"
+      ],
+      "footprint": [
+        2.405,
+        1.48,
+        1.06
+      ],
+      "accent": false,
+      "hero": "大块深棕 + 圆耳 + 大鼻盘",
+      "format": "sprite+glb/v1",
+      "sprite": "assets/sprites/animals__bear.png",
+      "glb": "assets/gltf/animals__bear.glb"
+    },
+    {
+      "category": "animals",
+      "id": "duck",
+      "name_zh": "鸭",
+      "name_en": "Duck",
+      "tags": [
+        "duck",
+        "animal",
+        "farm",
+        "bird",
+        "biped",
+        "pond"
+      ],
+      "footprint": [
+        1.18,
+        0.95,
+        0.94
+      ],
+      "accent": false,
+      "hero": "黄身 + 橙扁喙 + 橙蹼足(biped)",
+      "format": "sprite+glb/v1",
+      "sprite": "assets/sprites/animals__duck.png",
+      "glb": "assets/gltf/animals__duck.glb"
+    },
+    {
+      "category": "props",
+      "id": "shelf",
+      "name_zh": "货架(gondola)",
+      "name_en": "Gondola shelf",
+      "tags": [
+        "shelf",
+        "store",
+        "retail",
+        "supermarket",
+        "rack",
+        "gondola"
+      ],
+      "footprint": [
+        1.04,
+        1.33,
+        0.46
+      ],
+      "accent": true,
+      "hero": "彩色踢脚板 + 三层补货 + 金价签条",
+      "format": "sprite+glb/v1",
+      "sprite": "assets/sprites/props__shelf.png",
+      "glb": "assets/gltf/props__shelf.glb"
+    },
+    {
+      "category": "props",
+      "id": "freezer",
+      "name_zh": "敞口冷柜",
+      "name_en": "Open freezer",
+      "tags": [
+        "freezer",
+        "fridge",
+        "cold",
+        "store",
+        "supermarket",
+        "glow"
+      ],
+      "footprint": [
+        0.99,
+        0.69,
+        0.69
+      ],
+      "accent": false,
+      "hero": "冷蓝发光内胆 + 半透玻璃盖",
+      "format": "sprite+glb/v1",
+      "sprite": "assets/sprites/props__freezer.png",
+      "glb": "assets/gltf/props__freezer.glb"
+    },
+    {
+      "category": "props",
+      "id": "checkout",
+      "name_zh": "收银台",
+      "name_en": "Checkout counter",
+      "tags": [
+        "checkout",
+        "cashier",
+        "register",
+        "store",
+        "conveyor"
+      ],
+      "footprint": [
+        1.05,
+        1.03,
+        0.61
+      ],
+      "accent": true,
+      "hero": "传送带 + 倾斜收银屏",
+      "format": "sprite+glb/v1",
+      "sprite": "assets/sprites/props__checkout.png",
+      "glb": "assets/gltf/props__checkout.glb"
+    },
+    {
+      "category": "props",
+      "id": "produce",
+      "name_zh": "果蔬箱",
+      "name_en": "Produce crate",
+      "tags": [
+        "produce",
+        "fruit",
+        "vegetable",
+        "crate",
+        "box",
+        "food",
+        "store"
+      ],
+      "footprint": [
+        0.79,
+        0.402,
+        0.545
+      ],
+      "accent": false,
+      "hero": "木箱 + 多面体水果 3x4",
+      "format": "sprite+glb/v1",
+      "sprite": "assets/sprites/props__produce.png",
+      "glb": "assets/gltf/props__produce.glb"
+    },
+    {
+      "category": "props",
+      "id": "basket",
+      "name_zh": "购物篮",
+      "name_en": "Shopping basket",
+      "tags": [
+        "basket",
+        "cart",
+        "store",
+        "groceries",
+        "handle"
+      ],
+      "footprint": [
+        0.53,
+        0.59,
+        0.39
+      ],
+      "accent": false,
+      "hero": "粗拱把手 + 杂货",
+      "format": "sprite+glb/v1",
+      "sprite": "assets/sprites/props__basket.png",
+      "glb": "assets/gltf/props__basket.glb"
+    },
+    {
+      "category": "props",
+      "id": "aisleSign",
+      "name_zh": "货道牌",
+      "name_en": "Aisle sign",
+      "tags": [
+        "sign",
+        "aisle",
+        "number",
+        "store",
+        "signage"
+      ],
+      "footprint": [
+        0.52,
+        1.45,
+        0.52
+      ],
+      "accent": true,
+      "hero": "厚双层底座 + 双面号码板",
+      "format": "sprite+glb/v1",
+      "sprite": "assets/sprites/props__aisleSign.png",
+      "glb": "assets/gltf/props__aisleSign.glb"
+    },
+    {
+      "category": "props",
+      "id": "snackRack",
+      "name_zh": "零食架(冲动消费)",
+      "name_en": "Snack Rack",
+      "tags": [
+        "snackRack",
+        "prop",
+        "rack",
+        "shelf",
+        "impulse",
+        "snacks",
+        "retail",
+        "store"
+      ],
+      "footprint": [
+        0.62,
+        1.1,
+        0.38
+      ],
+      "accent": true,
+      "hero": "落地三层货架 + teal 顶栏 + 六色商品盒",
+      "format": "sprite+glb/v1",
+      "sprite": "assets/sprites/props__snackRack.png",
+      "glb": "assets/gltf/props__snackRack.glb"
+    },
+    {
+      "category": "props",
+      "id": "coffeeMachine",
+      "name_zh": "咖啡贩售机",
+      "name_en": "Coffee Machine",
+      "tags": [
+        "coffeeMachine",
+        "prop",
+        "vending",
+        "coffee",
+        "machine",
+        "retail",
+        "store",
+        "appliance"
+      ],
+      "footprint": [
+        0.78,
+        1.55,
+        0.71
+      ],
+      "accent": true,
+      "hero": "落地机身 + teal 顶冠 + 不透明展示窗(杯) + 选择按钮",
+      "format": "sprite+glb/v1",
+      "sprite": "assets/sprites/props__coffeeMachine.png",
+      "glb": "assets/gltf/props__coffeeMachine.glb"
+    },
+    {
+      "category": "goods",
+      "id": "bottle",
+      "name_zh": "瓶子",
+      "name_en": "Bottle",
+      "tags": [
+        "bottle",
+        "goods",
+        "low-poly"
+      ],
+      "footprint": [
+        0.3,
+        0.58,
+        0.3
+      ],
+      "accent": false,
+      "hero": "玻璃瓶身 + 细颈瓶盖(酒水/饮料)",
+      "format": "sprite+glb/v1",
+      "sprite": "assets/sprites/goods__bottle.png",
+      "glb": "assets/gltf/goods__bottle.glb"
+    },
+    {
+      "category": "goods",
+      "id": "can",
+      "name_zh": "罐头",
+      "name_en": "Can",
+      "tags": [
+        "can",
+        "goods",
+        "low-poly"
+      ],
+      "footprint": [
+        0.295,
+        0.38,
+        0.31
+      ],
+      "accent": false,
+      "hero": "矮圆柱 + 深色顶盖(罐头/咖啡)",
+      "format": "sprite+glb/v1",
+      "sprite": "assets/sprites/goods__can.png",
+      "glb": "assets/gltf/goods__can.glb"
+    },
+    {
+      "category": "goods",
+      "id": "snackBag",
+      "name_zh": "零食袋",
+      "name_en": "Snack Bag",
+      "tags": [
+        "snackBag",
+        "goods",
+        "low-poly"
+      ],
+      "footprint": [
+        0.3,
+        0.45,
+        0.13
+      ],
+      "accent": false,
+      "hero": "扁袋 + 深色封口(薯片/零食)",
+      "format": "sprite+glb/v1",
+      "sprite": "assets/sprites/goods__snackBag.png",
+      "glb": "assets/gltf/goods__snackBag.glb"
+    },
+    {
+      "category": "goods",
+      "id": "boxPack",
+      "name_zh": "盒装",
+      "name_en": "Box Pack",
+      "tags": [
+        "boxPack",
+        "goods",
+        "low-poly"
+      ],
+      "footprint": [
+        0.34,
+        0.325,
+        0.3
+      ],
+      "accent": false,
+      "hero": "方盒 + 顶盖(泡面/盒装)",
+      "format": "sprite+glb/v1",
+      "sprite": "assets/sprites/goods__boxPack.png",
+      "glb": "assets/gltf/goods__boxPack.glb"
+    },
+    {
+      "category": "goods",
+      "id": "fruitPile",
+      "name_zh": "水果堆",
+      "name_en": "Fruit Pile",
+      "tags": [
+        "fruitPile",
+        "goods",
+        "low-poly"
+      ],
+      "footprint": [
+        0.404,
+        0.334,
+        0.294
+      ],
+      "accent": false,
+      "hero": "三颗球面果堆叠",
+      "format": "sprite+glb/v1",
+      "sprite": "assets/sprites/goods__fruitPile.png",
+      "glb": "assets/gltf/goods__fruitPile.glb"
+    },
+    {
+      "category": "goods",
+      "id": "iceCream",
+      "name_zh": "冰淇淋",
+      "name_en": "Ice Cream",
+      "tags": [
+        "iceCream",
+        "goods",
+        "low-poly"
+      ],
+      "footprint": [
+        0.255,
+        0.58,
+        0.255
+      ],
+      "accent": false,
+      "hero": "木色蛋筒 + 球形冰淇淋 + 白尖",
+      "format": "sprite+glb/v1",
+      "sprite": "assets/sprites/goods__iceCream.png",
+      "glb": "assets/gltf/goods__iceCream.glb"
+    },
+    {
+      "category": "goods",
+      "id": "carton",
+      "name_zh": "纸盒乳品",
+      "name_en": "Carton",
+      "tags": [
+        "carton",
+        "goods",
+        "low-poly"
+      ],
+      "footprint": [
+        0.26,
+        0.52,
+        0.26
+      ],
+      "accent": false,
+      "hero": "山墙顶纸盒(牛奶/酸奶)",
+      "format": "sprite+glb/v1",
+      "sprite": "assets/sprites/goods__carton.png",
+      "glb": "assets/gltf/goods__carton.glb"
+    },
+    {
+      "category": "goods",
+      "id": "leafyVeg",
+      "name_zh": "叶菜",
+      "name_en": "Leafy Veg",
+      "tags": [
+        "leafyVeg",
+        "goods",
+        "low-poly"
+      ],
+      "footprint": [
+        0.403,
+        0.451,
+        0.243
+      ],
+      "accent": false,
+      "hero": "双株绿叶 + 茎(蔬菜)",
+      "format": "sprite+glb/v1",
+      "sprite": "assets/sprites/goods__leafyVeg.png",
+      "glb": "assets/gltf/goods__leafyVeg.glb"
+    },
+    {
+      "category": "goods",
+      "id": "sodaCan",
+      "name_zh": "汽水罐",
+      "name_en": "Soda Can",
+      "tags": [
+        "sodaCan",
+        "goods",
+        "low-poly"
+      ],
+      "footprint": [
+        0.25,
+        0.508,
+        0.25
+      ],
+      "accent": false,
+      "hero": "细高铝罐 + 拉环凹点(冷饮)",
+      "format": "sprite+glb/v1",
+      "sprite": "assets/sprites/goods__sodaCan.png",
+      "glb": "assets/gltf/goods__sodaCan.glb"
+    },
+    {
+      "category": "goods",
+      "id": "bloodBag",
+      "name_zh": "血袋",
+      "name_en": "Blood Bag",
+      "tags": [
+        "bloodBag",
+        "goods",
+        "low-poly"
+      ],
+      "footprint": [
+        0.27,
+        0.44,
+        0.112
+      ],
+      "accent": true,
+      "hero": "扁血浆袋 + 封口 + 白标 + 引流管(After Dark)",
+      "format": "sprite+glb/v1",
+      "sprite": "assets/sprites/goods__bloodBag.png",
+      "glb": "assets/gltf/goods__bloodBag.glb"
+    },
+    {
+      "category": "goods",
+      "id": "meatSlab",
+      "name_zh": "生肉",
+      "name_en": "Meat Slab",
+      "tags": [
+        "meatSlab",
+        "goods",
+        "low-poly"
+      ],
+      "footprint": [
+        0.36,
+        0.15,
+        0.26
+      ],
+      "accent": false,
+      "hero": "生肉块 + 脂盖 + 侧露断骨(After Dark)",
+      "format": "sprite+glb/v1",
+      "sprite": "assets/sprites/goods__meatSlab.png",
+      "glb": "assets/gltf/goods__meatSlab.glb"
+    },
+    {
+      "category": "goods",
+      "id": "brain",
+      "name_zh": "脑花",
+      "name_en": "Brain",
+      "tags": [
+        "brain",
+        "goods",
+        "low-poly"
+      ],
+      "footprint": [
+        0.395,
+        0.301,
+        0.261
+      ],
+      "accent": true,
+      "hero": "两瓣褶皱脑叶 + 中央裂沟(After Dark)",
+      "format": "sprite+glb/v1",
+      "sprite": "assets/sprites/goods__brain.png",
+      "glb": "assets/gltf/goods__brain.glb"
+    },
+    {
+      "category": "plants",
+      "id": "pine",
+      "name_zh": "针叶树",
+      "name_en": "Pine tree",
+      "tags": [
+        "pine",
+        "tree",
+        "conifer",
+        "plant",
+        "nature",
+        "forest",
+        "evergreen"
+      ],
+      "footprint": [
+        0.897,
+        1.425,
+        0.874
+      ],
+      "accent": false,
+      "hero": "三层渐亮堆叠锥 + 金尖",
+      "format": "sprite+glb/v1",
+      "sprite": "assets/sprites/plants__pine.png",
+      "glb": "assets/gltf/plants__pine.glb"
+    },
+    {
+      "category": "plants",
+      "id": "roundTree",
+      "name_zh": "阔叶树",
+      "name_en": "Broadleaf tree",
+      "tags": [
+        "tree",
+        "broadleaf",
+        "plant",
+        "nature",
+        "forest",
+        "foliage"
+      ],
+      "footprint": [
+        0.905,
+        1.355,
+        0.715
+      ],
+      "accent": false,
+      "hero": "多面体球簇树冠 + 红果",
+      "format": "sprite+glb/v1",
+      "sprite": "assets/sprites/plants__roundTree.png",
+      "glb": "assets/gltf/plants__roundTree.glb"
+    },
+    {
+      "category": "plants",
+      "id": "bush",
+      "name_zh": "灌木",
+      "name_en": "Bush",
+      "tags": [
+        "bush",
+        "shrub",
+        "plant",
+        "nature",
+        "foliage",
+        "hedge"
+      ],
+      "footprint": [
+        0.928,
+        0.759,
+        0.711
+      ],
+      "accent": false,
+      "hero": "球簇 + 点缀花苞",
+      "format": "sprite+glb/v1",
+      "sprite": "assets/sprites/plants__bush.png",
+      "glb": "assets/gltf/plants__bush.glb"
+    },
+    {
+      "category": "plants",
+      "id": "flower",
+      "name_zh": "花",
+      "name_en": "Flower",
+      "tags": [
+        "flower",
+        "plant",
+        "bloom",
+        "nature",
+        "petal",
+        "decor"
+      ],
+      "footprint": [
+        0.52,
+        0.705,
+        0.44
+      ],
+      "accent": true,
+      "hero": "四瓣 + 金心 + 叶",
+      "format": "sprite+glb/v1",
+      "sprite": "assets/sprites/plants__flower.png",
+      "glb": "assets/gltf/plants__flower.glb"
+    },
+    {
+      "category": "plants",
+      "id": "mushroom",
+      "name_zh": "蘑菇",
+      "name_en": "Mushroom",
+      "tags": [
+        "mushroom",
+        "fungus",
+        "plant",
+        "nature",
+        "red",
+        "forest"
+      ],
+      "footprint": [
+        0.736,
+        0.6,
+        0.72
+      ],
+      "accent": true,
+      "hero": "红伞白点 + 小橙伴生",
+      "format": "sprite+glb/v1",
+      "sprite": "assets/sprites/plants__mushroom.png",
+      "glb": "assets/gltf/plants__mushroom.glb"
+    },
+    {
+      "category": "plants",
+      "id": "rock",
+      "name_zh": "岩石",
+      "name_en": "Rock",
+      "tags": [
+        "rock",
+        "stone",
+        "boulder",
+        "nature",
+        "terrain"
+      ],
+      "footprint": [
+        0.88,
+        0.578,
+        0.591
+      ],
+      "accent": false,
+      "hero": "三块多面体 + 苔藓地块",
+      "format": "sprite+glb/v1",
+      "sprite": "assets/sprites/plants__rock.png",
+      "glb": "assets/gltf/plants__rock.glb"
+    },
+    {
+      "category": "plants",
+      "id": "pottedPlant",
+      "name_zh": "盆栽",
+      "name_en": "Potted plant",
+      "tags": [
+        "potted",
+        "plant",
+        "pot",
+        "houseplant",
+        "indoor",
+        "decor"
+      ],
+      "footprint": [
+        0.791,
+        1.067,
+        0.531
+      ],
+      "accent": true,
+      "hero": "teal 家族色花盆 + 叶扇",
+      "format": "sprite+glb/v1",
+      "sprite": "assets/sprites/plants__pottedPlant.png",
+      "glb": "assets/gltf/plants__pottedPlant.glb"
+    },
+    {
+      "category": "scene",
+      "id": "grassTile",
+      "name_zh": "草地块",
+      "name_en": "Grass tile",
+      "tags": [
+        "grass",
+        "tile",
+        "ground",
+        "terrain",
+        "green",
+        "floor",
+        "field"
+      ],
+      "footprint": [
+        1,
+        0.46,
+        1
+      ],
+      "accent": false,
+      "hero": "草绿板 + 草叶 + 石",
+      "format": "sprite+glb/v1",
+      "sprite": "assets/sprites/scene__grassTile.png",
+      "glb": "assets/gltf/scene__grassTile.glb"
+    },
+    {
+      "category": "scene",
+      "id": "roadTile",
+      "name_zh": "路面块",
+      "name_en": "Road tile",
+      "tags": [
+        "road",
+        "tile",
+        "asphalt",
+        "street",
+        "ground",
+        "terrain",
+        "floor"
+      ],
+      "footprint": [
+        1,
+        0.33,
+        1
+      ],
+      "accent": true,
+      "hero": "沥青 + 金黄虚线 + 路缘",
+      "format": "sprite+glb/v1",
+      "sprite": "assets/sprites/scene__roadTile.png",
+      "glb": "assets/gltf/scene__roadTile.glb"
+    },
+    {
+      "category": "scene",
+      "id": "waterTile",
+      "name_zh": "水面块",
+      "name_en": "Water tile",
+      "tags": [
+        "water",
+        "tile",
+        "river",
+        "pond",
+        "terrain",
+        "blue",
+        "floor"
+      ],
+      "footprint": [
+        1,
+        0.305,
+        1
+      ],
+      "accent": false,
+      "hero": "muted 蓝 + 抬起的浅色浪脊",
+      "format": "sprite+glb/v1",
+      "sprite": "assets/sprites/scene__waterTile.png",
+      "glb": "assets/gltf/scene__waterTile.glb"
+    },
+    {
+      "category": "scene",
+      "id": "house",
+      "name_zh": "房屋",
+      "name_en": "House",
+      "tags": [
+        "house",
+        "building",
+        "home",
+        "roof",
+        "structure"
+      ],
+      "footprint": [
+        2.093,
+        1.32,
+        2.093
+      ],
+      "accent": true,
+      "hero": "四坡红顶 + teal 烟囱帽 + 发光窗",
+      "format": "sprite+glb/v1",
+      "sprite": "assets/sprites/scene__house.png",
+      "glb": "assets/gltf/scene__house.glb"
+    },
+    {
+      "category": "scene",
+      "id": "fence",
+      "name_zh": "围栏",
+      "name_en": "Fence",
+      "tags": [
+        "fence",
+        "barrier",
+        "wood",
+        "boundary",
+        "yard"
+      ],
+      "footprint": [
+        1,
+        0.6,
+        0.2
+      ],
+      "accent": false,
+      "hero": "木桩尖帽 + 双横梁",
+      "format": "sprite+glb/v1",
+      "sprite": "assets/sprites/scene__fence.png",
+      "glb": "assets/gltf/scene__fence.glb"
+    },
+    {
+      "category": "scene",
+      "id": "lamp",
+      "name_zh": "路灯",
+      "name_en": "Street lamp",
+      "tags": [
+        "lamp",
+        "light",
+        "streetlight",
+        "glow",
+        "post",
+        "night"
+      ],
+      "footprint": [
+        0.84,
+        1.29,
+        0.6
+      ],
+      "accent": true,
+      "hero": "厚灯笼头 + 暖黄发光面",
+      "format": "sprite+glb/v1",
+      "sprite": "assets/sprites/scene__lamp.png",
+      "glb": "assets/gltf/scene__lamp.glb"
+    },
+    {
+      "category": "scene",
+      "id": "stall",
+      "name_zh": "摊位",
+      "name_en": "Market stall",
+      "tags": [
+        "stall",
+        "market",
+        "shop",
+        "booth",
+        "awning",
+        "vendor"
+      ],
+      "footprint": [
+        1.04,
+        1.27,
+        0.6
+      ],
+      "accent": true,
+      "hero": "teal 条纹遮阳棚 + 货物",
+      "format": "sprite+glb/v1",
+      "sprite": "assets/sprites/scene__stall.png",
+      "glb": "assets/gltf/scene__stall.glb"
+    }
+  ]
+}
