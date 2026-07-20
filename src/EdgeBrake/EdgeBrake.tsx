@@ -1,6 +1,7 @@
 import { useMemo, useState, type CSSProperties } from 'react'
 import { CHARACTERS, CHARACTER_BY_ID, characterName, nextRosterCharacter, weatherForLevel } from './characters'
 import EdgeBrakeScene from './components/EdgeBrakeScene'
+import Watermark from './components/Watermark'
 import { useEdgeBrake } from './hooks/useEdgeBrake'
 import { createTranslator, detectLocale, type CopyKey } from './i18n'
 import { CHARACTER_FRONT, FIELD_H, FIELD_W, type CharacterId, type Rating } from './types'
@@ -103,6 +104,8 @@ export default function EdgeBrake() {
       <section className="eb-stage" aria-label={t('title')}>
         <EdgeBrakeScene x={view.x} cliffX={view.cliffX} braking={view.isBraking} phase={view.phase} rating={view.result?.rating ?? null} characterId={view.characterId} preloadCharacterId={nextResultCharacter.id} velocity={view.velocity} weather={weather} />
       </section>
+
+      <Watermark />
 
       {isInteractive && (
         <div className={`eb-danger${danger > 0.72 ? ' eb-danger--hot' : ''}`}>
