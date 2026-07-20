@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { FIELD_H, FIELD_W, PENGUIN_FRONT, type Rating, type RoundResult, type ViewState } from '../types'
+import { CHARACTER_BY_ID } from '../characters'
+import { FIELD_H, FIELD_W, PENGUIN_FRONT, type CharacterId, type Rating, type RoundResult, type ViewState } from '../types'
 import { playSound } from '../utils/sounds'
 
 const START_X = 64
@@ -9,7 +10,8 @@ const RESULT_MS = 850
 const FALL_MS = 650
 const START_SPEED = 96
 const ACCELERATION = 70
-const BRAKE_FORCE = 260
+const BRAKE_FORCE = 250
+const CHARACTER_IDS: CharacterId[] = ['penguin', 'kid', 'granny', 'businessman', 'fox', 'frog', 'bear']
 
 function randomCliff() {
   return 330 + Math.round(Math.random() * 20)
@@ -20,7 +22,31 @@ function readNumber(key: string, fallback: number) {
   return Number.isFinite(value) ? value : fallback
 }
 
-const initialState = (): ViewState => ({
+function readUnlocked(): CharacterId[] {
+  try {
+    const parsed = JSON.parse(localStorage.getItem('edge_brake_unlocked') || '[]')
+    const valid = Array.isArray(parsed) ? parsed.filter((id): id is CharacterId => CHARACTER_IDS.includes(id)) : []
+    return Array.from(new Set<CharacterId>(['penguin', ...valid]))
+  } catch {
+    return ['penguin']
+  }
+}
+
+function readCharacter(unlocked: CharacterId[]): CharacterId {
+  const saved = localStorage.getItem('edge_brake_character') as CharacterId | null
+  return saved && unlocked.includes(saved) ? saved : 'penguin'
+}
+
+function saveCollection(coins: number, unlocked: CharacterId[], characterId: CharacterId, maxLevel: number) {
+  localStorage.setItem('edge_brake_coins', String(coins))
+  localStorage.setItem('edge_brake_unlocked', JSON.stringify(unlocked))
+  localStorage.setItem('edge_brake_character', characterId)
+  localStorage.setItem('edge_brake_max_level', String(maxLevel))
+}
+
+const initialState = (): ViewState => {
+  const unlockedCharacters = readUnlocked()
+  return ({
   phase: 'cover',
   x: START_X,
   velocity: 0,
@@ -34,10 +60,17 @@ const initialState = (): ViewState => ({
     ? null
     : readNumber('edge_brake_best_distance', 0),
   bestScore: readNumber('edge_brake_best_score', 0),
+  coins: readNumber('edge_brake_coins', 0),
+  runCoins: 0,
+  maxLevel: readNumber('edge_brake_max_level', 1),
+  characterId: readCharacter(unlockedCharacters),
+  unlockedCharacters,
+  newUnlock: null,
   result: null,
   eventKey: 0,
   muted: localStorage.getItem('edge_brake_muted') === '1',
-})
+  })
+}
 
 export function useEdgeBrake() {
   const [view, setView] = useState<ViewState>(initialState)
@@ -49,6 +82,7 @@ export function useEdgeBrake() {
   const stopSinceRef = useRef<number | null>(null)
   const resultTimerRef = useRef<number | null>(null)
   const fallTimerRef = useRef<number | null>(null)
+  const unlockTimerRef = useRef<number | null>(null)
 
   const commit = useCallback((next: ViewState | ((current: ViewState) => ViewState)) => {
     const value = typeof next === 'function' ? next(stateRef.current) : next
@@ -59,24 +93,39 @@ export function useEdgeBrake() {
   const clearTimers = useCallback(() => {
     if (resultTimerRef.current !== null) window.clearTimeout(resultTimerRef.current)
     if (fallTimerRef.current !== null) window.clearTimeout(fallTimerRef.current)
+    if (unlockTimerRef.current !== null) window.clearTimeout(unlockTimerRef.current)
     resultTimerRef.current = null
     fallTimerRef.current = null
+    unlockTimerRef.current = null
   }, [])
 
   const beginRound = useCallback((level: number) => {
     stopSinceRef.current = null
     readyAtRef.current = performance.now()
-    commit(current => ({
+    const current = stateRef.current
+    const unlocked = [...current.unlockedCharacters]
+    const newlyUnlocked = Object.values(CHARACTER_BY_ID).find(spec => spec.unlockLevel && level >= spec.unlockLevel && !unlocked.includes(spec.id))?.id ?? null
+    if (newlyUnlocked) unlocked.push(newlyUnlocked)
+    const maxLevel = Math.max(current.maxLevel, level)
+    saveCollection(current.coins, unlocked, current.characterId, maxLevel)
+    commit({
       ...current,
       phase: 'ready',
       x: START_X,
       velocity: START_SPEED,
       cliffX: randomCliff(),
       level,
+      maxLevel,
+      unlockedCharacters: unlocked,
+      newUnlock: newlyUnlocked,
       isBraking: false,
       result: null,
       eventKey: current.eventKey + 1,
-    }))
+    })
+    if (newlyUnlocked) {
+      playSound('unlock', current.muted)
+      unlockTimerRef.current = window.setTimeout(() => commit(now => ({ ...now, newUnlock: null })), 1700)
+    }
   }, [commit])
 
   const start = useCallback(() => {
@@ -118,12 +167,16 @@ export function useEdgeBrake() {
     const nextBestScore = Math.max(current.bestScore, nextScore)
     const nextBestCombo = Math.max(current.bestCombo, nextCombo)
     const nextBestDistance = current.bestDistance === null ? distance : Math.min(current.bestDistance, distance)
-    const result: RoundResult = { distance, rating, points }
+    const earnedCoins = (rating === 'edge' ? 7 : rating === 'great' ? 4 : rating === 'safe' ? 2 : 1) + Math.min(nextCombo, 3)
+    const result: RoundResult = { distance, rating, points, coins: earnedCoins }
+    const nextCoins = current.coins + earnedCoins
 
     localStorage.setItem('edge_brake_best_score', String(nextBestScore))
     localStorage.setItem('edge_brake_best_combo', String(nextBestCombo))
     localStorage.setItem('edge_brake_best_distance', String(nextBestDistance))
+    saveCollection(nextCoins, current.unlockedCharacters, current.characterId, current.maxLevel)
     playSound(rating === 'edge' ? 'edge' : rating === 'great' ? 'great' : 'safe', current.muted)
+    window.setTimeout(() => playSound('coin', current.muted), 90)
 
     commit({
       ...current,
@@ -135,6 +188,8 @@ export function useEdgeBrake() {
       bestScore: nextBestScore,
       bestCombo: nextBestCombo,
       bestDistance: nextBestDistance,
+      coins: nextCoins,
+      runCoins: current.runCoins + earnedCoins,
       result,
       eventKey: current.eventKey + 1,
     })
@@ -163,7 +218,7 @@ export function useEdgeBrake() {
     } else if (current.phase === 'playing') {
       const maxSpeed = Math.min(238 + (current.level - 1) * 10, 330)
       let velocity = current.velocity
-      if (current.isBraking) velocity = Math.max(0, velocity - BRAKE_FORCE * dt)
+      if (current.isBraking) velocity = Math.max(0, velocity - BRAKE_FORCE * CHARACTER_BY_ID[current.characterId].friction * dt)
       else velocity = Math.min(maxSpeed, velocity + ACCELERATION * dt)
       const x = current.x + velocity * dt
       const front = x + PENGUIN_FRONT
@@ -216,6 +271,35 @@ export function useEdgeBrake() {
     if (!next) playSound('button', false)
   }, [commit])
 
+  const selectCharacter = useCallback((characterId: CharacterId) => {
+    const current = stateRef.current
+    if (!current.unlockedCharacters.includes(characterId)) return false
+    saveCollection(current.coins, current.unlockedCharacters, characterId, current.maxLevel)
+    playSound('button', current.muted)
+    commit({ ...current, characterId, eventKey: current.eventKey + 1 })
+    return true
+  }, [commit])
+
+  const buyCharacter = useCallback((characterId: CharacterId) => {
+    const current = stateRef.current
+    const spec = CHARACTER_BY_ID[characterId]
+    if (current.unlockedCharacters.includes(characterId)) return selectCharacter(characterId)
+    if (spec.unlockLevel && current.maxLevel < spec.unlockLevel) {
+      playSound('deny', current.muted)
+      return false
+    }
+    if (current.coins < spec.cost) {
+      playSound('deny', current.muted)
+      return false
+    }
+    const unlockedCharacters = [...current.unlockedCharacters, characterId]
+    const coins = current.coins - spec.cost
+    saveCollection(coins, unlockedCharacters, characterId, current.maxLevel)
+    playSound('unlock', current.muted)
+    commit({ ...current, coins, unlockedCharacters, characterId, eventKey: current.eventKey + 1 })
+    return true
+  }, [commit, selectCharacter])
+
   const goHome = useCallback(() => {
     clearTimers()
     commit(current => ({ ...initialState(), muted: current.muted, eventKey: current.eventKey + 1 }))
@@ -244,5 +328,5 @@ export function useEdgeBrake() {
     return () => window.removeEventListener('resize', compute)
   }, [])
 
-  return { view, scale, start, triggerBrake, toggleMuted, goHome }
+  return { view, scale, start, triggerBrake, toggleMuted, goHome, selectCharacter, buyCharacter }
 }

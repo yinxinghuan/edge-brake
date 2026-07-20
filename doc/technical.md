@@ -6,7 +6,7 @@
 - React Three Fiber + Three.js 渲染正交斜俯视的低多边形 3D 场景；Drei `ContactShadows` 提供接触阴影。
 - Less 管理 DOM 界面、响应式缩放、状态动效与无障碍降级。
 - Vite 5 构建，`base: './'`，产物可直接部署到任意子路径。
-- Web Audio API 合成开始、刹车、停车、贴边与坠落音效；localStorage 保存最高分、最佳距离、最高连击、静音状态和语言覆盖。
+- Web Audio API 合成开始、刹车、停车、金币、解锁与坠落音效；localStorage 保存成绩、收藏、金币、当前角色、静音状态和语言覆盖。
 
 ## 2. 目录结构
 
@@ -14,7 +14,9 @@
 - `src/game-id.ts`：由同步脚本生成的永久游戏 UUID 注入文件，源码迭代时不得手动更换。
 - `src/App.tsx` / `src/App.less`：全屏容器与视口基础样式。
 - `src/EdgeBrake/EdgeBrake.tsx`：屏幕状态、HUD、输入层和结果界面组合。
-- `src/EdgeBrake/components/EdgeBrakeScene.tsx`：3D 世界、企鹅、浮冰、海面、冰山、灯光、阴影和特效。
+- `src/EdgeBrake/characters.ts`：7 名角色的素材 URL、体型缩放、抓地系数、价格、里程碑与天气关卡表。
+- `src/EdgeBrake/assets/characters/`：从共享 low-poly 素材库复制的 6 个 GLB 模型及其商店 PNG 缩略图；企鹅仍由本游戏基础图元构建。
+- `src/EdgeBrake/components/EdgeBrakeScene.tsx`：3D 世界、角色加载与动作、分层冰舌、断崖、海面、冰山、天气、镜头、灯光、阴影和特效。
 - `src/EdgeBrake/hooks/useEdgeBrake.ts`：游戏主循环、物理、评分、关卡推进、输入和本地记录。
 - `src/EdgeBrake/types.ts`：画布尺寸、阶段、评分与视图状态类型。
 - `src/EdgeBrake/i18n/index.ts`：中英文文案和语言检测。
@@ -29,19 +31,23 @@
 
 - 状态与主循环：`useEdgeBrake` 用单实例 `requestAnimationFrame` 更新位置和速度；循环代数令牌防止 React StrictMode 或热更新留下重复动画循环。
 - 游戏阶段：`cover → ready → playing → result` 组成成功回合；越过冰崖后进入 `falling → gameover`，结果层等待坠落动作完成后出现。
-- 物理与评分：企鹅以 96 px/s 起步，未制动时按 70 px/s² 加速；玩家单击锁定制动后按 260 px/s² 持续减速，速度低于 3 px/s 并稳定 110 ms 后结算；依据企鹅前缘到冰崖的 0–8、9–22、23–52 和 53+ px 四档计算得分与连击。
-- 3D 映射与镜头：逻辑层继续使用稳定的屏幕空间数值，场景层通过 `screenToWorld()` 映射到世界 X 轴。封面阶段的正交相机在 2.6 秒内从高位广角推进至游戏机位；进入回合后，`FollowCamera` 以阻尼跟随企鹅并向前预看，使企鹅保持在画面偏左、冰崖和海面持续可见。开启“减少动态效果”时跳过开场运镜。
-- 渲染：场景资产由低段数基础几何拼装，全部使用 flat-shaded 高粗糙度材质；主光、填充光、轮廓光、雾和接触阴影统一体积感。
+- 物理与评分：角色以 96 px/s 起步，未制动时按 70 px/s² 加速；单击后以 `250 × 当前角色抓地系数` px/s² 持续减速，速度低于 3 px/s 并稳定 110 ms 后结算；依据角色前缘到冰崖的 0–8、9–22、23–52 和 53+ px 四档计算得分、连击和金币。
+- 角色与动作：`useGLTF` 加载共享素材库 GLB 并 clone 当前角色；人物 GLB 的扁平网格按空间位置重建肩/髋枢轴，从而支持滑行摆臂摆腿和急停撑地。动物使用整体起伏、前倾、压低与后仰，企鹅使用独立鳍、脚和身体动作。待机呼吸、滑行动作、急停和坠落均由同一 `useFrame` 状态机插值。
+- 收藏经济：永久金币、已解锁角色、当前角色与最高关卡存入 localStorage。成功停车按评价发放 1–7 枚基础金币并叠加最多 3 枚贴边连击奖励；第 3/5 关自动解锁小孩/狐狸，其余角色由 `buyCharacter()` 扣币解锁，`selectCharacter()` 负责选择并持久化。
+- 3D 映射与镜头：逻辑层继续使用屏幕空间数值，场景层通过 `screenToWorld()` 映射到世界 X 轴。封面正交相机在 2.8 秒内从高位广角推进至游戏机位；回合中 `FollowCamera` 根据危险进度同时改变 X/Z、相机高度、观察点与 zoom，形成连续环绕推进。成功结算阶段相机提前回收，避免下一关准备时角色暂时离屏；“减少动态效果”会跳过开场运镜。
+- 场景与天气：冰舌由深层冰、浅层冰、错位雪帽、裂缝、雪脊、分段崖壁、冰柱、浪脊和漂浮碎冰组成。`weatherForLevel()` 按 6 关周期选择晴朗、飘雪、薄雾或风雪；`Atmosphere` 阻尼调整天空与雾距，`WeatherFx` 更新跟随角色的点状雪粒子，天气不参与摩擦计算。
+- 渲染：场景与角色使用 flat-shaded 高粗糙度材质；共享 GLB 与本地基础图元共用主光、填充光、轮廓光、雾和接触阴影，保持三值体积感。
 - 输入：游戏区域一次 `onPointerDown` 或一次 Space / Enter 锁定本回合制动；重复输入不会取消或重新触发，下一回合才恢复可点击状态。
 - 适配：390×700 游戏场以视口中心为原点按宽高最小比例缩放，320×568 下完整显示；DOM HUD 和按钮的内部尺寸保持至少 44 px 触控目标。
 - 音频与多语言：首次交互后创建 AudioContext，音频失败不影响玩法；所有可见文案通过轻量 `t()` 提供中文与英文。
 - 平台身份：`src/game-id.ts` 将永久 UUID `5cc524e5-8b5b-48a2-bc0d-e8ecd80fa30a` 写入 `window.__GAME_UUID__`，为后续排行榜、存档与事件提供隔离锚点。
-- 持久化：最高分、最佳停车距离、最高贴边连击和静音设置保存到 localStorage；当前版本尚未调用后端、排行榜或云存档接口。
+- 持久化：最高分、最佳停车距离、最高贴边连击、静音、永久金币、已解锁角色、当前角色与最高关卡保存到 localStorage；当前版本尚未调用后端、排行榜或云存档接口。
 
 ## 4. 扩展点
 
 - 调整速度、刹车力度、判定区间和关卡节奏：修改 `src/EdgeBrake/hooks/useEdgeBrake.ts` 的常量与 `finishRound()`。
-- 修改企鹅、浮冰、灯光、镜头、粒子和环境资产：修改 `src/EdgeBrake/components/EdgeBrakeScene.tsx`。
+- 增减角色、调整抓地力、价格、缩放和里程碑：修改 `src/EdgeBrake/characters.ts`，并将同源 GLB/PNG 放入 `src/EdgeBrake/assets/characters/`。
+- 修改角色动作、冰舌、天气、灯光、镜头、粒子和环境资产：修改 `src/EdgeBrake/components/EdgeBrakeScene.tsx`。
 - 修改 HUD、开始页、结果页、颜色、排版与动效：修改 `src/EdgeBrake/EdgeBrake.tsx`、`EdgeBrake.less` 和 `doc/visual.md`。
 - 增加新文案或调整中英文：修改 `src/EdgeBrake/i18n/index.ts`。
 - 调整声音频率、波形、时长和音量：修改 `src/EdgeBrake/utils/sounds.ts`，并同步更新 `doc/requirements.md`。
