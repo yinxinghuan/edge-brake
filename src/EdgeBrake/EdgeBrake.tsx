@@ -1,4 +1,4 @@
-import { useMemo, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react'
+import { useMemo, useState, type CSSProperties } from 'react'
 import aigramSrc from './img/aigram.svg'
 import EdgeBrakeScene from './components/EdgeBrakeScene'
 import { useEdgeBrake } from './hooks/useEdgeBrake'
@@ -16,24 +16,13 @@ function SoundIcon({ muted }: { muted: boolean }) {
 }
 
 export default function EdgeBrake() {
-  const { view, scale, start, setBraking, toggleMuted, goHome } = useEdgeBrake()
+  const { view, scale, start, triggerBrake, toggleMuted, goHome } = useEdgeBrake()
   const [locale] = useState(detectLocale)
   const t = useMemo(() => createTranslator(locale), [locale])
   const isInteractive = view.phase === 'ready' || view.phase === 'playing'
   const showHud = view.phase !== 'cover'
   const ratingCopy: Record<Rating, CopyKey> = {
     edge: 'edge', great: 'great', safe: 'safe', early: 'early',
-  }
-
-  const handlePointerDown = (event: ReactPointerEvent) => {
-    if (!isInteractive) return
-    event.currentTarget.setPointerCapture(event.pointerId)
-    setBraking(true)
-  }
-
-  const handlePointerUp = (event: ReactPointerEvent) => {
-    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId)
-    setBraking(false)
   }
 
   return (
@@ -44,9 +33,7 @@ export default function EdgeBrake() {
       data-velocity={view.velocity.toFixed(2)}
       data-cliff={view.cliffX}
       style={{ width: FIELD_W, height: FIELD_H, transform: `translate(-50%, -50%) scale(${scale})`, transformOrigin: 'center' }}
-      onPointerDown={handlePointerDown}
-      onPointerUp={handlePointerUp}
-      onPointerCancel={() => setBraking(false)}
+      onPointerDown={() => { if (isInteractive) triggerBrake() }}
       onContextMenu={event => event.preventDefault()}
     >
       <div className="eb__sky" aria-hidden="true">

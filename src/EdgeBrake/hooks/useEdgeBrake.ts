@@ -3,12 +3,13 @@ import { FIELD_H, FIELD_W, PENGUIN_FRONT, type Rating, type RoundResult, type Vi
 import { playSound } from '../utils/sounds'
 
 const START_X = 64
-const READY_MS = 700
-const STOP_HOLD_MS = 180
+const READY_MS = 500
+const STOP_HOLD_MS = 110
 const RESULT_MS = 850
 const FALL_MS = 650
-const ACCELERATION = 92
-const BRAKE_FORCE = 310
+const START_SPEED = 96
+const ACCELERATION = 70
+const BRAKE_FORCE = 260
 
 function randomCliff() {
   return 330 + Math.round(Math.random() * 20)
@@ -48,7 +49,6 @@ export function useEdgeBrake() {
   const stopSinceRef = useRef<number | null>(null)
   const resultTimerRef = useRef<number | null>(null)
   const fallTimerRef = useRef<number | null>(null)
-  const brakeSoundAtRef = useRef(0)
 
   const commit = useCallback((next: ViewState | ((current: ViewState) => ViewState)) => {
     const value = typeof next === 'function' ? next(stateRef.current) : next
@@ -70,7 +70,7 @@ export function useEdgeBrake() {
       ...current,
       phase: 'ready',
       x: START_X,
-      velocity: 72,
+      velocity: START_SPEED,
       cliffX: randomCliff(),
       level,
       isBraking: false,
@@ -86,7 +86,7 @@ export function useEdgeBrake() {
     commit({
       ...initialState(),
       phase: 'ready',
-      velocity: 72,
+      velocity: START_SPEED,
       cliffX: randomCliff(),
       muted: current.muted,
       eventKey: current.eventKey + 1,
@@ -129,7 +129,7 @@ export function useEdgeBrake() {
       ...current,
       phase: 'result',
       velocity: 0,
-      isBraking: false,
+      isBraking: true,
       score: nextScore,
       combo: nextCombo,
       bestScore: nextBestScore,
@@ -161,7 +161,7 @@ export function useEdgeBrake() {
       playSound('start', current.muted)
       commit({ ...current, phase: 'playing' })
     } else if (current.phase === 'playing') {
-      const maxSpeed = Math.min(250 + (current.level - 1) * 12, 370)
+      const maxSpeed = Math.min(238 + (current.level - 1) * 10, 330)
       let velocity = current.velocity
       if (current.isBraking) velocity = Math.max(0, velocity - BRAKE_FORCE * dt)
       else velocity = Math.min(maxSpeed, velocity + ACCELERATION * dt)
@@ -171,7 +171,7 @@ export function useEdgeBrake() {
       if (front > current.cliffX + 12) {
         commit({ ...current, x, velocity })
         fall()
-      } else if (current.isBraking && velocity < 4) {
+      } else if (current.isBraking && velocity < 3) {
         if (stopSinceRef.current === null) stopSinceRef.current = ts
         commit({ ...current, x, velocity })
         if (ts - stopSinceRef.current >= STOP_HOLD_MS) {
@@ -201,15 +201,12 @@ export function useEdgeBrake() {
     }
   }, [tick])
 
-  const setBraking = useCallback((braking: boolean) => {
+  const triggerBrake = useCallback(() => {
     const current = stateRef.current
     if (current.phase !== 'ready' && current.phase !== 'playing') return
-    if (current.isBraking === braking) return
-    if (braking && performance.now() - brakeSoundAtRef.current > 100) {
-      playSound('brake', current.muted)
-      brakeSoundAtRef.current = performance.now()
-    }
-    commit({ ...current, isBraking: braking })
+    if (current.isBraking) return
+    playSound('brake', current.muted)
+    commit({ ...current, isBraking: true })
   }, [commit])
 
   const toggleMuted = useCallback(() => {
@@ -228,27 +225,14 @@ export function useEdgeBrake() {
     const keyDown = (event: KeyboardEvent) => {
       if ((event.code === 'Space' || event.code === 'Enter') && !event.repeat) {
         event.preventDefault()
-        setBraking(true)
+        triggerBrake()
       }
     }
-    const keyUp = (event: KeyboardEvent) => {
-      if (event.code === 'Space' || event.code === 'Enter') {
-        event.preventDefault()
-        setBraking(false)
-      }
-    }
-    const release = () => setBraking(false)
     window.addEventListener('keydown', keyDown)
-    window.addEventListener('keyup', keyUp)
-    window.addEventListener('blur', release)
-    document.addEventListener('visibilitychange', release)
     return () => {
       window.removeEventListener('keydown', keyDown)
-      window.removeEventListener('keyup', keyUp)
-      window.removeEventListener('blur', release)
-      document.removeEventListener('visibilitychange', release)
     }
-  }, [setBraking])
+  }, [triggerBrake])
 
   useEffect(() => () => clearTimers(), [clearTimers])
 
@@ -260,5 +244,5 @@ export function useEdgeBrake() {
     return () => window.removeEventListener('resize', compute)
   }, [])
 
-  return { view, scale, start, setBraking, toggleMuted, goHome }
+  return { view, scale, start, triggerBrake, toggleMuted, goHome }
 }

@@ -1,5 +1,5 @@
 import { ContactShadows } from '@react-three/drei'
-import { Canvas, useFrame } from '@react-three/fiber'
+import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { useEffect, useMemo, useRef } from 'react'
 import * as THREE from 'three'
 import type { GamePhase, Rating } from '../types'
@@ -20,6 +20,54 @@ const screenToWorld = (px: number) => (px - 195) / 36
 
 function material(color: string, emissive?: string) {
   return <meshStandardMaterial color={color} flatShading roughness={0.88} metalness={0} emissive={emissive} emissiveIntensity={emissive ? 0.55 : 0} />
+}
+
+function FollowCamera({ x, phase }: { x: number; phase: GamePhase }) {
+  const { camera: threeCamera } = useThree()
+  const camera = threeCamera as THREE.OrthographicCamera
+  const followXRef = useRef(0)
+  const cameraPositionRef = useRef(new THREE.Vector3(-5.8, 12.5, 17.5))
+  const lookXRef = useRef(1.8)
+  const introStartRef = useRef(performance.now())
+  const reduceMotion = useMemo(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches, [])
+
+  useEffect(() => {
+    if (phase !== 'cover') return
+    introStartRef.current = performance.now()
+    followXRef.current = 0
+    cameraPositionRef.current.set(-5.8, 12.5, 17.5)
+    lookXRef.current = 1.8
+  }, [phase])
+
+  useFrame((_, delta) => {
+    if (phase === 'cover') {
+      const progress = reduceMotion ? 1 : Math.min((performance.now() - introStartRef.current) / 2600, 1)
+      const eased = 1 - Math.pow(1 - progress, 3)
+      cameraPositionRef.current.set(
+        THREE.MathUtils.lerp(-5.8, -2.2, eased),
+        THREE.MathUtils.lerp(12.5, 9, eased),
+        THREE.MathUtils.lerp(17.5, 13, eased),
+      )
+      lookXRef.current = THREE.MathUtils.lerp(1.8, 0.4, eased)
+      camera.zoom = THREE.MathUtils.lerp(32, 39, eased)
+    } else {
+      const penguinX = screenToWorld(x + 29)
+      const targetFollowX = Math.max(0, penguinX + 1.45)
+      followXRef.current = THREE.MathUtils.damp(followXRef.current, targetFollowX, 5.5, delta)
+      cameraPositionRef.current.x = THREE.MathUtils.damp(cameraPositionRef.current.x, followXRef.current - 2.2, 6.5, delta)
+      cameraPositionRef.current.y = THREE.MathUtils.damp(cameraPositionRef.current.y, 9, 6.5, delta)
+      cameraPositionRef.current.z = THREE.MathUtils.damp(cameraPositionRef.current.z, 13, 6.5, delta)
+      lookXRef.current = THREE.MathUtils.damp(lookXRef.current, followXRef.current + 0.4, 6.5, delta)
+      camera.zoom = THREE.MathUtils.damp(camera.zoom, 39, 6.5, delta)
+    }
+
+    camera.position.copy(cameraPositionRef.current)
+    camera.lookAt(lookXRef.current, 0, 0)
+    camera.updateProjectionMatrix()
+    camera.updateMatrixWorld()
+  })
+
+  return null
 }
 
 function LowPolyPenguin({ x, braking, phase }: { x: number; braking: boolean; phase: GamePhase }) {
@@ -143,6 +191,14 @@ function IcePlatform({ cliffX, rating }: { cliffX: number; rating: Rating | null
         <boxGeometry args={[1, 1, 1]} />
         {material(rating === 'edge' ? C.gold : '#dff7f3', rating === 'edge' ? C.gold : undefined)}
       </mesh>
+      <mesh receiveShadow position={[edge - 0.34, 0.395, 0]} scale={[0.62, 0.035, 3.4]}>
+        <boxGeometry args={[1, 1, 1]} />
+        {material('#c9efea')}
+      </mesh>
+      <mesh castShadow position={[edge + 0.04, -0.38, 0]} scale={[0.16, 1.25, 3.42]}>
+        <boxGeometry args={[1, 1, 1]} />
+        {material(C.iceDark)}
+      </mesh>
       {[-2.25, -0.8, 1.15].map((z, i) => (
         <mesh key={z} castShadow position={[edge - 0.16 - i * 0.1, -0.38 - i * 0.08, z]} rotation={[0, i * 0.6, 0]} scale={[0.42, 0.42, 0.42]}>
           <coneGeometry args={[0.62, 1.2, 5]} />
@@ -186,6 +242,7 @@ function World({ x, cliffX, braking, phase, rating }: { x: number; cliffX: numbe
       <directionalLight castShadow color="#ffffff" intensity={3.05} position={[6.5, 16, 8]} shadow-mapSize={[1024, 1024]} shadow-bias={-0.0004} />
       <directionalLight color="#dfe8ff" intensity={0.18} position={[-9, 5, -3]} />
       <directionalLight color="#fff0d8" intensity={0.28} position={[-5, 7, -10]} />
+      <FollowCamera x={x} phase={phase} />
 
       <mesh receiveShadow position={[0, -1.38, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <planeGeometry args={[38, 28]} />
@@ -220,11 +277,11 @@ export default function EdgeBrakeScene(props: { x: number; cliffX: number; braki
     <Canvas
       className="eb-scene"
       orthographic
-      camera={{ position: [0, 7, 12], zoom: 39, near: 0.1, far: 80 }}
+      camera={{ position: [-5.8, 12.5, 17.5], zoom: 32, near: 0.1, far: 80 }}
       shadows
       dpr={[1, 1.75]}
       gl={{ antialias: true, alpha: false, powerPreference: 'high-performance' }}
-      onCreated={({ camera }) => camera.lookAt(0, 0, 0)}
+      onCreated={({ camera }) => camera.lookAt(1.8, 0, 0)}
     >
       <World {...props} />
     </Canvas>

@@ -2,10 +2,10 @@ export type Locale = 'zh' | 'en'
 
 const zh = {
   title: '急刹车',
-  subtitle: '停得越险，分得越高',
+  subtitle: '看准时机，一击急停',
   start: '开始滑行',
-  hold: '按住刹车',
-  release: '松开继续滑',
+  hold: '点一下急停',
+  release: '制动中…',
   ready: '准备——',
   level: '关卡',
   score: '分数',
@@ -31,10 +31,10 @@ const zh = {
 
 const en: typeof zh = {
   title: 'EDGE BRAKE',
-  subtitle: 'Stop close. Score big.',
+  subtitle: 'One tap. Nail the stop.',
   start: 'START SLIDING',
-  hold: 'HOLD TO BRAKE',
-  release: 'RELEASE TO SLIDE',
+  hold: 'TAP TO BRAKE',
+  release: 'BRAKING…',
   ready: 'READY—',
   level: 'LEVEL',
   score: 'SCORE',

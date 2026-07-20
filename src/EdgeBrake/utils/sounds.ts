@@ -29,7 +29,7 @@ function tone(frequency: number, duration: number, volume: number, type: Oscilla
 export function playSound(name: 'start' | 'brake' | 'safe' | 'great' | 'edge' | 'fall' | 'button', muted: boolean) {
   if (muted) return
   if (name === 'start') tone(180, 0.1, 0.08, 'triangle', 0, 260)
-  if (name === 'brake') tone(135, 0.12, 0.055, 'sawtooth', 0, 92)
+  if (name === 'brake') tone(135, 0.15, 0.07, 'sawtooth', 0, 82)
   if (name === 'safe') tone(320, 0.09, 0.1)
   if (name === 'great') {
     tone(420, 0.11, 0.11)
