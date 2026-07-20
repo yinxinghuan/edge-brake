@@ -19,18 +19,19 @@ export interface CharacterSpec {
   unlockLevel?: number
   scale: number
   kind: 'penguin' | 'person' | 'animal'
+  headingYaw: number
   modelUrl?: string
   spriteUrl?: string
 }
 
 export const CHARACTERS: CharacterSpec[] = [
-  { id: 'penguin', friction: 1, cost: 0, scale: 1, kind: 'penguin' },
-  { id: 'kid', friction: 1.12, cost: 12, unlockLevel: 3, scale: 0.85, kind: 'person', modelUrl: kidModel, spriteUrl: kidSprite },
-  { id: 'granny', friction: 0.92, cost: 24, scale: 0.74, kind: 'person', modelUrl: grannyModel, spriteUrl: grannySprite },
-  { id: 'businessman', friction: 0.84, cost: 40, scale: 0.74, kind: 'person', modelUrl: businessmanModel, spriteUrl: businessmanSprite },
-  { id: 'fox', friction: 1.05, cost: 60, unlockLevel: 5, scale: 0.98, kind: 'animal', modelUrl: foxModel, spriteUrl: foxSprite },
-  { id: 'frog', friction: 1.22, cost: 85, scale: 1.08, kind: 'animal', modelUrl: frogModel, spriteUrl: frogSprite },
-  { id: 'bear', friction: 0.76, cost: 120, scale: 0.92, kind: 'animal', modelUrl: bearModel, spriteUrl: bearSprite },
+  { id: 'penguin', friction: 1, cost: 0, scale: 1, kind: 'penguin', headingYaw: 0 },
+  { id: 'kid', friction: 1.12, cost: 12, unlockLevel: 3, scale: 0.85, kind: 'person', headingYaw: Math.PI / 2, modelUrl: kidModel, spriteUrl: kidSprite },
+  { id: 'granny', friction: 0.92, cost: 24, scale: 0.74, kind: 'person', headingYaw: Math.PI / 2, modelUrl: grannyModel, spriteUrl: grannySprite },
+  { id: 'businessman', friction: 0.84, cost: 40, scale: 0.74, kind: 'person', headingYaw: Math.PI / 2, modelUrl: businessmanModel, spriteUrl: businessmanSprite },
+  { id: 'fox', friction: 1.05, cost: 60, unlockLevel: 5, scale: 0.98, kind: 'animal', headingYaw: 0, modelUrl: foxModel, spriteUrl: foxSprite },
+  { id: 'frog', friction: 1.22, cost: 85, scale: 1.08, kind: 'animal', headingYaw: 0, modelUrl: frogModel, spriteUrl: frogSprite },
+  { id: 'bear', friction: 0.76, cost: 120, scale: 0.92, kind: 'animal', headingYaw: 0, modelUrl: bearModel, spriteUrl: bearSprite },
 ]
 
 export const CHARACTER_BY_ID = Object.fromEntries(CHARACTERS.map(character => [character.id, character])) as Record<CharacterId, CharacterSpec>

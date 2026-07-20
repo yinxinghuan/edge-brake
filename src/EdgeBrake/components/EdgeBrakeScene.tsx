@@ -31,7 +31,7 @@ function FollowCamera({ x, cliffX, phase }: { x: number; cliffX: number; phase: 
   const { camera: threeCamera, size } = useThree()
   const camera = threeCamera as THREE.OrthographicCamera
   const renderScale = Math.min(size.width / 390, size.height / 700)
-  const cameraPositionRef = useRef(new THREE.Vector3(-5.4, 6.8, 9.6))
+  const cameraPositionRef = useRef(new THREE.Vector3(3.3, 6.8, 4.8))
   const lookXRef = useRef(screenToWorld(x + 29))
   const lookYRef = useRef(1.12)
   const fallStartRef = useRef<number | null>(null)
@@ -46,7 +46,7 @@ function FollowCamera({ x, cliffX, phase }: { x: number; cliffX: number; phase: 
   useEffect(() => {
     if (phase !== 'cover') return
     const heroX = screenToWorld(x + 29)
-    cameraPositionRef.current.set(heroX - 2.1, 6.8, 9.6)
+    cameraPositionRef.current.set(heroX + 6.8, 6.8, 4.8)
     lookXRef.current = heroX + 0.12
     lookYRef.current = 1.12
   }, [phase, x])
@@ -72,9 +72,9 @@ function FollowCamera({ x, cliffX, phase }: { x: number; cliffX: number; phase: 
     if (phase === 'cover') {
       const heroX = screenToWorld(x + 29)
       const drift = reduceMotion ? 0 : Math.sin(state.clock.elapsedTime * 0.62) * 0.16
-      cameraPositionRef.current.x = THREE.MathUtils.damp(cameraPositionRef.current.x, heroX - 2.1 + drift, 3.2, delta)
+      cameraPositionRef.current.x = THREE.MathUtils.damp(cameraPositionRef.current.x, heroX + 6.8 + drift, 3.2, delta)
       cameraPositionRef.current.y = THREE.MathUtils.damp(cameraPositionRef.current.y, 6.8, 3.2, delta)
-      cameraPositionRef.current.z = THREE.MathUtils.damp(cameraPositionRef.current.z, 9.6 - drift * 0.45, 3.2, delta)
+      cameraPositionRef.current.z = THREE.MathUtils.damp(cameraPositionRef.current.z, 4.8 - drift * 0.45, 3.2, delta)
       lookXRef.current = THREE.MathUtils.damp(lookXRef.current, heroX + 0.12, 4, delta)
       lookYRef.current = THREE.MathUtils.damp(lookYRef.current, 1.12, 4, delta)
       camera.zoom = THREE.MathUtils.damp(camera.zoom, 64 * renderScale, 4, delta)
@@ -90,9 +90,9 @@ function FollowCamera({ x, cliffX, phase }: { x: number; cliffX: number; phase: 
       const cameraResponse = falling ? 8.4 : 6.2
 
       if (phase === 'ready' || phase === 'result') {
-        cameraPositionRef.current.x = THREE.MathUtils.damp(cameraPositionRef.current.x, startCharacterX - 2.1, 8.5, delta)
+        cameraPositionRef.current.x = THREE.MathUtils.damp(cameraPositionRef.current.x, startCharacterX + 6.8, 8.5, delta)
         cameraPositionRef.current.y = THREE.MathUtils.damp(cameraPositionRef.current.y, 6.8, 8.5, delta)
-        cameraPositionRef.current.z = THREE.MathUtils.damp(cameraPositionRef.current.z, 9.6, 8.5, delta)
+        cameraPositionRef.current.z = THREE.MathUtils.damp(cameraPositionRef.current.z, 4.8, 8.5, delta)
         lookXRef.current = THREE.MathUtils.damp(lookXRef.current, startCharacterX + 0.12, 8.5, delta)
         lookYRef.current = THREE.MathUtils.damp(lookYRef.current, 1.12, 8.5, delta)
         camera.zoom = THREE.MathUtils.damp(camera.zoom, 64 * renderScale, 8.5, delta)
@@ -159,8 +159,8 @@ function AssetCharacter({ id, x, braking, phase, velocity }: { id: CharacterId; 
         const meshCenter = new THREE.Box3().setFromObject(mesh).getCenter(new THREE.Vector3())
         const low = meshCenter.y < bounds.min.y + size.y * 0.43
         const outside = Math.abs(meshCenter.x - center.x) > size.x * 0.35
-        if (low && Math.abs(meshCenter.x - center.x) > size.x * 0.06) (meshCenter.x < center.x ? legL : legR).attach(mesh)
-        else if (outside && meshCenter.y < bounds.min.y + size.y * 0.76) (meshCenter.x < center.x ? armL : armR).attach(mesh)
+        if (outside && meshCenter.y < bounds.min.y + size.y * 0.76) (meshCenter.x < center.x ? armL : armR).attach(mesh)
+        else if (low && Math.abs(meshCenter.x - center.x) > size.x * 0.06) (meshCenter.x < center.x ? legL : legR).attach(mesh)
       }
       pivots.push(legL, legR, armL, armR)
     } else {
@@ -248,13 +248,13 @@ function AssetCharacter({ id, x, braking, phase, velocity }: { id: CharacterId; 
       group.current.position.y = 0.38 - elapsed * elapsed * 5.4
       group.current.rotation.z = THREE.MathUtils.lerp(0.08, -1.35, elapsed)
       group.current.rotation.x = THREE.MathUtils.lerp(0, 1.05, elapsed)
-      group.current.rotation.y = THREE.MathUtils.lerp(Math.PI / 2, Math.PI / 2 + 0.62, elapsed)
+      group.current.rotation.y = THREE.MathUtils.lerp(spec.headingYaw, spec.headingYaw + 0.62, elapsed)
       group.current.scale.setScalar(baseScale * (1 - elapsed * 0.16))
     } else {
       group.current.position.y = THREE.MathUtils.damp(group.current.position.y, 0.38, 18, delta)
       group.current.rotation.z = THREE.MathUtils.damp(group.current.rotation.z, braking ? 0.38 * brakePunch : moving ? -0.07 : 0, 15, delta)
       group.current.rotation.x = THREE.MathUtils.damp(group.current.rotation.x, braking ? -0.16 * brakePunch : moving ? -0.08 : 0, 15, delta)
-      group.current.rotation.y = THREE.MathUtils.damp(group.current.rotation.y, Math.PI / 2, 18, delta)
+      group.current.rotation.y = THREE.MathUtils.damp(group.current.rotation.y, spec.headingYaw, 18, delta)
       group.current.scale.setScalar(baseScale)
     }
 
@@ -280,18 +280,18 @@ function AssetCharacter({ id, x, braking, phase, velocity }: { id: CharacterId; 
         rig[3].rotation.z = THREE.MathUtils.damp(rig[3].rotation.z, falling ? 1.28 : braking ? 1.08 : 0.52 + Math.abs(armCounter), 18, delta)
       } else {
         const diagonal = moving ? stride * 0.52 : phase === 'ready' ? readyCrouch * 0.24 : 0
-        ;[0, 3].forEach(index => { rig[index].rotation.x = THREE.MathUtils.damp(rig[index].rotation.x, falling ? 0.9 : braking ? 0.62 : diagonal, 20, delta) })
-        ;[1, 2].forEach(index => { rig[index].rotation.x = THREE.MathUtils.damp(rig[index].rotation.x, falling ? -0.9 : braking ? -0.36 : -diagonal, 20, delta) })
+        ;[0, 3].forEach(index => { rig[index].rotation.z = THREE.MathUtils.damp(rig[index].rotation.z, falling ? 0.9 : braking ? 0.62 : diagonal, 20, delta) })
+        ;[1, 2].forEach(index => { rig[index].rotation.z = THREE.MathUtils.damp(rig[index].rotation.z, falling ? -0.9 : braking ? -0.36 : -diagonal, 20, delta) })
         rig.forEach((limb, index) => {
           const side = index % 2 === 0 ? -1 : 1
-          limb.rotation.z = THREE.MathUtils.damp(limb.rotation.z, falling ? side * 0.72 : braking ? side * 0.46 : side * Math.abs(diagonal) * 0.22, 18, delta)
+          limb.rotation.x = THREE.MathUtils.damp(limb.rotation.x, falling ? side * 0.72 : braking ? side * 0.46 : side * Math.abs(diagonal) * 0.22, 18, delta)
         })
       }
     }
   })
 
   return (
-    <group ref={group} position={[screenToWorld(x + 29), 0.38, 0.12]} rotation={[0, Math.PI / 2, 0]}>
+    <group ref={group} position={[screenToWorld(x + 29), 0.38, 0.12]} rotation={[0, spec.headingYaw, 0]}>
       <group ref={pose}>
         <primitive object={clone} />
       </group>
@@ -715,7 +715,7 @@ export default function EdgeBrakeScene(props: { x: number; cliffX: number; braki
     <Canvas
       className="eb-scene"
       orthographic
-      camera={{ position: [-5.4, 6.8, 9.6], zoom: 64, near: 0.1, far: 90 }}
+      camera={{ position: [3.3, 6.8, 4.8], zoom: 64, near: 0.1, far: 90 }}
       shadows
       dpr={[1, 1.75]}
       gl={{ antialias: true, alpha: false, powerPreference: 'high-performance' }}
