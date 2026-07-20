@@ -26,10 +26,16 @@ function tone(frequency: number, duration: number, volume: number, type: Oscilla
   }
 }
 
-export function playSound(name: 'start' | 'brake' | 'safe' | 'great' | 'edge' | 'earlyFail' | 'fall' | 'button' | 'coin' | 'unlock' | 'deny', muted: boolean) {
+export function playSound(name: 'charge' | 'powerReady' | 'launch' | 'safe' | 'great' | 'edge' | 'earlyFail' | 'fall' | 'button' | 'coin' | 'unlock' | 'deny', muted: boolean, intensity = 0.5) {
   if (muted) return
-  if (name === 'start') tone(180, 0.1, 0.08, 'triangle', 0, 260)
-  if (name === 'brake') tone(135, 0.15, 0.07, 'sawtooth', 0, 82)
+  if (name === 'charge') tone(180, 0.14, 0.06, 'triangle', 0, 260)
+  if (name === 'powerReady') tone(520, 0.055, 0.045)
+  if (name === 'launch') {
+    const power = Math.min(1, Math.max(0.12, intensity))
+    const startFrequency = 210 + power * 210
+    tone(startFrequency, 0.12, 0.075 + power * 0.055, 'triangle', 0, startFrequency * 1.45)
+    tone(88, 0.055, 0.045 + power * 0.035, 'square')
+  }
   if (name === 'safe') tone(320, 0.09, 0.1)
   if (name === 'great') {
     tone(420, 0.11, 0.11)

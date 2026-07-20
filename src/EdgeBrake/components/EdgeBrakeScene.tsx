@@ -31,7 +31,7 @@ function material(color: string, emissive?: string) {
   return <meshStandardMaterial color={color} flatShading roughness={0.88} metalness={0} emissive={emissive} emissiveIntensity={emissive ? 0.55 : 0} />
 }
 
-function FollowCamera({ x, cliffX, phase, braking, rating }: { x: number; cliffX: number; phase: GamePhase; braking: boolean; rating: Rating | null }) {
+function FollowCamera({ x, cliffX, phase, charging, chargePower, rating }: { x: number; cliffX: number; phase: GamePhase; charging: boolean; chargePower: number; rating: Rating | null }) {
   const { camera: threeCamera, size } = useThree()
   const camera = threeCamera as THREE.OrthographicCamera
   const renderScale = Math.min(size.width / 390, size.height / 700)
@@ -130,7 +130,7 @@ function FollowCamera({ x, cliffX, phase, braking, rating }: { x: number; cliffX
       const characterX = screenToWorld(x + 29)
       const danger = phase === 'playing' ? THREE.MathUtils.clamp((x + 49 - 40) / Math.max(1, cliffX - 40), 0, 1) : 0
       const tension = THREE.MathUtils.smoothstep(danger, 0.16, 0.88)
-      const followBlend = braking ? 1 : THREE.MathUtils.smoothstep(tension, 0.12, 0.68)
+      const followBlend = THREE.MathUtils.smoothstep(tension, 0.12, 0.68)
       const startCharacterX = screenToWorld(40 + 29)
       const trackCenter = (startCharacterX + screenToWorld(cliffX)) / 2
       const remainingCenter = (characterX + screenToWorld(cliffX)) / 2
@@ -140,15 +140,16 @@ function FollowCamera({ x, cliffX, phase, braking, rating }: { x: number; cliffX
       const successAge = successStartRef.current === null ? 0 : performance.now() - successStartRef.current
       const earlyFailAge = earlyFailStartRef.current === null ? 0 : performance.now() - earlyFailStartRef.current
       const successfulResult = rating !== null && rating !== 'early'
-      const cameraResponse = falling ? 8.4 : braking ? 10.5 : 6.2
+      const cameraResponse = falling ? 8.4 : 6.2
 
-      if (phase === 'awaiting' || phase === 'ready') {
-        cameraPositionRef.current.x = THREE.MathUtils.damp(cameraPositionRef.current.x, startCharacterX + 6.8, 8.5, delta)
-        cameraPositionRef.current.y = THREE.MathUtils.damp(cameraPositionRef.current.y, 6.8, 8.5, delta)
-        cameraPositionRef.current.z = THREE.MathUtils.damp(cameraPositionRef.current.z, 4.8, 8.5, delta)
+      if (phase === 'awaiting' || phase === 'charging') {
+        const pressure = charging ? chargePower : 0
+        cameraPositionRef.current.x = THREE.MathUtils.damp(cameraPositionRef.current.x, startCharacterX + 6.8 - pressure * 0.42, 8.5, delta)
+        cameraPositionRef.current.y = THREE.MathUtils.damp(cameraPositionRef.current.y, 6.8 - pressure * 0.22, 8.5, delta)
+        cameraPositionRef.current.z = THREE.MathUtils.damp(cameraPositionRef.current.z, 4.8 - pressure * 0.16, 8.5, delta)
         lookXRef.current = THREE.MathUtils.damp(lookXRef.current, startCharacterX + 0.12, 8.5, delta)
         lookYRef.current = THREE.MathUtils.damp(lookYRef.current, 1.12, 8.5, delta)
-        camera.zoom = THREE.MathUtils.damp(camera.zoom, 64 * renderScale, 8.5, delta)
+        camera.zoom = THREE.MathUtils.damp(camera.zoom, (64 + pressure * 6) * renderScale, 8.5, delta)
       } else if (phase === 'success' && successStartRef.current !== null) {
         const hold = reduceMotion ? 1 : THREE.MathUtils.clamp((successAge - 120) / 980, 0, 1)
         const eased = 1 - Math.pow(1 - hold, 3)
@@ -180,12 +181,16 @@ function FollowCamera({ x, cliffX, phase, braking, rating }: { x: number; cliffX
         lookXRef.current = THREE.MathUtils.damp(lookXRef.current, remainingCenter, 4.6, delta)
         lookYRef.current = THREE.MathUtils.damp(lookYRef.current, 0.05, 4.6, delta)
         camera.zoom = THREE.MathUtils.damp(camera.zoom, 7.4 * renderScale, 4.6, delta)
-      } else if (phase === 'playing' && playingStartRef.current !== null && playingAge < 2050) {
-        const pullback = reduceMotion ? 1 : THREE.MathUtils.clamp(playingAge / 1050, 0, 1)
+      } else if (phase === 'playing' && playingStartRef.current !== null && playingAge < 2100) {
+        const launchHold = reduceMotion ? 0 : 280
+        const pullback = reduceMotion ? 1 : THREE.MathUtils.clamp((playingAge - launchHold) / 920, 0, 1)
         const eased = 1 - Math.pow(1 - pullback, 3)
+        const closePosition = playingFromPositionRef.current.clone()
+        closePosition.x += characterX - startCharacterX
+        const closeLookX = playingFromLookXRef.current + characterX - startCharacterX
         overviewPositionRef.current.set(trackCenter - 4, 14, 21)
-        cameraPositionRef.current.lerpVectors(playingFromPositionRef.current, overviewPositionRef.current, eased)
-        lookXRef.current = THREE.MathUtils.lerp(playingFromLookXRef.current, trackCenter, eased)
+        cameraPositionRef.current.lerpVectors(closePosition, overviewPositionRef.current, eased)
+        lookXRef.current = THREE.MathUtils.lerp(closeLookX, trackCenter, eased)
         lookYRef.current = THREE.MathUtils.lerp(playingFromLookYRef.current, 0.05, eased)
         camera.zoom = THREE.MathUtils.lerp(playingFromZoomRef.current, 6.8 * renderScale, eased)
       } else if (falling) {
@@ -208,16 +213,16 @@ function FollowCamera({ x, cliffX, phase, braking, rating }: { x: number; cliffX
           camera.zoom = failureZoom
         }
       } else {
-        const targetCameraX = braking ? characterX + 6.2 : THREE.MathUtils.lerp(trackCenter - 4, characterX + 5.8, followBlend)
+        const targetCameraX = THREE.MathUtils.lerp(trackCenter - 4, characterX + 5.8, followBlend)
         const targetLookX = THREE.MathUtils.lerp(trackCenter, characterX, followBlend)
         cameraPositionRef.current.x = THREE.MathUtils.damp(cameraPositionRef.current.x, targetCameraX, cameraResponse, delta)
-        const targetCameraY = braking ? 5.8 : THREE.MathUtils.lerp(14, 5.2, tension)
-        const targetCameraZ = braking ? 3.2 : THREE.MathUtils.lerp(21, 3.6, tension)
+        const targetCameraY = THREE.MathUtils.lerp(14, 5.2, tension)
+        const targetCameraZ = THREE.MathUtils.lerp(21, 3.6, tension)
         cameraPositionRef.current.y = THREE.MathUtils.damp(cameraPositionRef.current.y, targetCameraY, cameraResponse, delta)
         cameraPositionRef.current.z = THREE.MathUtils.damp(cameraPositionRef.current.z, targetCameraZ, cameraResponse, delta)
         lookXRef.current = THREE.MathUtils.damp(lookXRef.current, targetLookX, cameraResponse, delta)
-        lookYRef.current = THREE.MathUtils.damp(lookYRef.current, braking ? 0.72 : THREE.MathUtils.lerp(0.05, 0.72, tension), cameraResponse, delta)
-        const targetZoom = braking ? Math.max(54, THREE.MathUtils.lerp(6.8, 68, tension)) : THREE.MathUtils.lerp(6.8, 68, tension)
+        lookYRef.current = THREE.MathUtils.damp(lookYRef.current, THREE.MathUtils.lerp(0.05, 0.72, tension), cameraResponse, delta)
+        const targetZoom = THREE.MathUtils.lerp(6.8, 68, tension)
         camera.zoom = THREE.MathUtils.damp(camera.zoom, targetZoom * renderScale, cameraResponse, delta)
       }
     }
@@ -231,7 +236,7 @@ function FollowCamera({ x, cliffX, phase, braking, rating }: { x: number; cliffX
   return null
 }
 
-function AssetCharacter({ id, x, braking, phase, velocity }: { id: CharacterId; x: number; braking: boolean; phase: GamePhase; velocity: number }) {
+function AssetCharacter({ id, x, charging, chargePower, phase, velocity }: { id: CharacterId; x: number; charging: boolean; chargePower: number; phase: GamePhase; velocity: number }) {
   const spec = CHARACTER_BY_ID[id]
   const gltf = useGLTF(spec.modelUrl!)
   const prepared = useMemo(() => {
@@ -329,7 +334,7 @@ function AssetCharacter({ id, x, braking, phase, velocity }: { id: CharacterId; 
   const pose = useRef<THREE.Group>(null)
   const fallStart = useRef<number | null>(null)
   const phaseStart = useRef(performance.now())
-  const brakeStart = useRef<number | null>(null)
+  const chargeStart = useRef<number | null>(null)
   const rig = prepared.pivots
 
   useEffect(() => {
@@ -344,20 +349,20 @@ function AssetCharacter({ id, x, braking, phase, velocity }: { id: CharacterId; 
   useEffect(() => {
     phaseStart.current = performance.now()
     if (phase === 'falling') fallStart.current = performance.now()
-    if (phase === 'awaiting' || phase === 'ready' || phase === 'playing') fallStart.current = null
+    if (phase === 'awaiting' || phase === 'charging' || phase === 'playing') fallStart.current = null
   }, [phase])
 
   useEffect(() => {
-    brakeStart.current = braking ? performance.now() : null
-  }, [braking])
+    chargeStart.current = charging ? performance.now() : null
+  }, [charging])
 
   useFrame((state, delta) => {
     if (!group.current || !pose.current) return
     const targetX = screenToWorld(x + 29)
     const time = state.clock.elapsedTime
     const phaseAge = (performance.now() - phaseStart.current) / 1000
-    const brakeAge = brakeStart.current === null ? 0 : (performance.now() - brakeStart.current) / 1000
-    const moving = phase === 'playing' && !braking
+    const chargeAge = chargeStart.current === null ? 0 : (performance.now() - chargeStart.current) / 1000
+    const moving = phase === 'playing' && !charging
     const idle = phase === 'cover' || phase === 'awaiting' || phase === 'result'
     const outcomePose = phase === 'success' || phase === 'earlyFail'
     const falling = phase === 'falling' || phase === 'gameover'
@@ -370,9 +375,9 @@ function AssetCharacter({ id, x, braking, phase, velocity }: { id: CharacterId; 
     const strideRaw = moving ? Math.sin(time * (4.9 + velocity * 0.009) * motionRate) : 0
     const stride = Math.sign(strideRaw) * Math.pow(Math.abs(strideRaw), 0.68)
     const breath = (Math.sin(time * Math.PI * 1.6) + 1) * 0.5
-    const readyAction = phase === 'ready' ? THREE.MathUtils.clamp((phaseAge - 0.08) / 0.44, 0, 1) : 0
-    const readyCrouch = Math.sin(readyAction * Math.PI)
-    const brakePunch = braking ? Math.min(brakeAge / 0.18, 1) : 0
+    const chargeCrouch = charging ? THREE.MathUtils.smoothstep(chargePower, 0, 1) : 0
+    const launchStage = moving ? THREE.MathUtils.clamp(1 - phaseAge / 0.62, 0, 1) : 0
+    const chargePunch = charging ? Math.min(chargeAge / 0.18, 1) : 0
     const bounce = spec.motion === 'hover'
       ? (idle ? Math.sin(time * 2.2) * 0.06 : moving ? Math.sin(time * 4.2) * 0.045 : 0)
       : idle ? breath * (spec.motion === 'mech' ? 0.018 : 0.035) : moving ? Math.abs(strideRaw) * (spec.motion === 'mech' ? 0.035 : 0.065) : 0
@@ -391,57 +396,57 @@ function AssetCharacter({ id, x, braking, phase, velocity }: { id: CharacterId; 
       group.current.position.y = THREE.MathUtils.damp(group.current.position.y, 0.38, 18, delta)
       group.current.rotation.z = THREE.MathUtils.damp(group.current.rotation.z, moving ? stride * 0.025 : 0, 15, delta)
       const movingLean = spec.motion === 'hover' ? -0.2 : spec.motion === 'mech' ? -0.09 : -0.14
-      const brakeLean = spec.motion === 'hover' ? 0.34 : spec.motion === 'frog' ? 0.1 : 0.24
-      group.current.rotation.x = THREE.MathUtils.damp(group.current.rotation.x, braking ? brakeLean * brakePunch : moving ? movingLean : 0, 15, delta)
+      const chargeLean = spec.motion === 'hover' ? 0.24 : spec.motion === 'frog' ? 0.08 : 0.18
+      group.current.rotation.x = THREE.MathUtils.damp(group.current.rotation.x, charging ? chargeLean * chargeCrouch : moving ? movingLean - launchStage * 0.12 : 0, 15, delta)
       group.current.rotation.y = THREE.MathUtils.damp(group.current.rotation.y, spec.headingYaw, 18, delta)
       group.current.scale.setScalar(baseScale)
     }
 
     const skateShift = moving ? stride * 0.07 : 0
-    pose.current.position.y = THREE.MathUtils.damp(pose.current.position.y, bounce - readyCrouch * 0.1 - (braking ? 0.12 : 0), 18, delta)
+    pose.current.position.y = THREE.MathUtils.damp(pose.current.position.y, bounce - chargeCrouch * 0.2 + launchStage * 0.08, 18, delta)
     pose.current.position.x = THREE.MathUtils.damp(pose.current.position.x, skateShift, 16, delta)
-    const brakeTremor = braking && !outcomePose && brakeAge > 0.18 ? Math.sin(brakeAge * 30) * 0.065 : 0
-    const brakeArmSwing = braking && !outcomePose ? Math.sin(Math.max(0, brakeAge - 0.08) * 12.1) * 0.27 * brakePunch : 0
-    const brakeLegBalance = braking && !outcomePose ? Math.sin(Math.max(0, brakeAge - 0.08) * 15.4) * 0.09 * brakePunch : 0
-    pose.current.rotation.z = THREE.MathUtils.damp(pose.current.rotation.z, falling ? fallWave * 0.12 : phase === 'ready' ? -0.12 * readyCrouch : braking ? brakeTremor : moving ? stride * 0.055 : Math.sin(time * 2.2) * 0.018, 16, delta)
+    const chargeTremor = charging && !outcomePose && chargePower >= 0.82 ? Math.sin(chargeAge * 30) * 0.035 : 0
+    const chargeArmSwing = charging && !outcomePose ? Math.sin(Math.max(0, chargeAge - 0.08) * 9.2) * 0.09 * chargePunch : 0
+    const chargeLegBalance = charging && !outcomePose ? Math.sin(Math.max(0, chargeAge - 0.08) * 11.4) * 0.05 * chargePunch : 0
+    pose.current.rotation.z = THREE.MathUtils.damp(pose.current.rotation.z, falling ? fallWave * 0.12 : charging ? -0.08 * chargeCrouch + chargeTremor : moving ? stride * 0.055 : Math.sin(time * 2.2) * 0.018, 16, delta)
     pose.current.rotation.y = THREE.MathUtils.damp(pose.current.rotation.y, moving ? stride * 0.1 : idle ? Math.sin(time * 1.8) * 0.025 : 0, 14, delta)
     const squashWeight = spec.motion === 'mech' ? 0.35 : spec.motion === 'hover' ? 0.55 : spec.motion === 'frog' ? 1.25 : 1
-    const verticalScale = 1 + breath * (idle ? 0.025 * squashWeight : 0) - readyCrouch * 0.085 * squashWeight - (braking ? 0.07 * squashWeight : 0)
-    pose.current.scale.set(1 + readyCrouch * 0.035, verticalScale, 1)
+    const verticalScale = 1 + breath * (idle ? 0.025 * squashWeight : 0) - chargeCrouch * 0.13 * squashWeight + launchStage * 0.04
+    pose.current.scale.set(1 + chargeCrouch * 0.055 - launchStage * 0.025, verticalScale, 1)
 
     if (rig.length >= 4) {
       if (spec.motion === 'human' || spec.motion === 'mech') {
         const limbWeight = spec.motion === 'mech' ? 0.68 : 1
         const pushLeft = moving ? Math.max(0, stride) : 0
         const pushRight = moving ? Math.max(0, -stride) : 0
-        const legAction = phase === 'ready' ? readyCrouch * 0.34 : 0
-        const armCounter = moving ? stride * 0.82 : idle ? Math.sin(time * 1.8) * 0.1 : 0
+        const legAction = charging ? chargeCrouch * 0.52 : 0
+        const armCounter = moving ? stride * (0.72 + launchStage * 0.48) : idle ? Math.sin(time * 1.8) * 0.1 : 0
         const armLeftOut = moving ? Math.max(0, armCounter) : 0
         const armRightOut = moving ? Math.max(0, -armCounter) : 0
-        rig[0].rotation.x = THREE.MathUtils.damp(rig[0].rotation.x, falling ? 0.72 + fallWave * 0.5 : braking ? (0.32 + brakeLegBalance) * limbWeight : (legAction + stride * 1.08) * limbWeight, 22, delta)
-        rig[1].rotation.x = THREE.MathUtils.damp(rig[1].rotation.x, falling ? -0.72 - fallWave * 0.42 : braking ? (0.32 - brakeLegBalance) * limbWeight : (-legAction - stride * 1.08) * limbWeight, 22, delta)
-        rig[2].rotation.x = THREE.MathUtils.damp(rig[2].rotation.x, falling ? -0.82 - fallWave * 0.62 : braking ? (1.16 + brakeArmSwing) * limbWeight : -armCounter * limbWeight, 22, delta)
-        rig[3].rotation.x = THREE.MathUtils.damp(rig[3].rotation.x, falling ? 0.82 - fallWave * 0.55 : braking ? (1.16 - brakeArmSwing) * limbWeight : armCounter * limbWeight, 22, delta)
-        rig[0].rotation.z = THREE.MathUtils.damp(rig[0].rotation.z, falling ? -0.58 - fallWave * 0.28 : braking ? -0.98 - brakeLegBalance : -0.18 - pushLeft * 0.68, 22, delta)
-        rig[1].rotation.z = THREE.MathUtils.damp(rig[1].rotation.z, falling ? 0.58 - fallWave * 0.28 : braking ? 0.98 + brakeLegBalance : 0.18 + pushRight * 0.68, 22, delta)
-        rig[2].rotation.z = THREE.MathUtils.damp(rig[2].rotation.z, falling ? -1.16 - fallWave * 0.34 : braking ? -0.62 - Math.abs(brakeArmSwing) * 0.18 : -0.48 - armLeftOut * 0.78, 22, delta)
-        rig[3].rotation.z = THREE.MathUtils.damp(rig[3].rotation.z, falling ? 1.16 - fallWave * 0.34 : braking ? 0.62 + Math.abs(brakeArmSwing) * 0.18 : 0.48 + armRightOut * 0.78, 22, delta)
+        rig[0].rotation.x = THREE.MathUtils.damp(rig[0].rotation.x, falling ? 0.72 + fallWave * 0.5 : charging ? (legAction + chargeLegBalance) * limbWeight : (stride * (1.02 + launchStage * 0.3)) * limbWeight, 22, delta)
+        rig[1].rotation.x = THREE.MathUtils.damp(rig[1].rotation.x, falling ? -0.72 - fallWave * 0.42 : charging ? (-legAction - chargeLegBalance) * limbWeight : (-stride * (1.02 + launchStage * 0.3)) * limbWeight, 22, delta)
+        rig[2].rotation.x = THREE.MathUtils.damp(rig[2].rotation.x, falling ? -0.82 - fallWave * 0.62 : charging ? (1.16 + chargeArmSwing) * limbWeight : -armCounter * limbWeight, 22, delta)
+        rig[3].rotation.x = THREE.MathUtils.damp(rig[3].rotation.x, falling ? 0.82 - fallWave * 0.55 : charging ? (1.16 - chargeArmSwing) * limbWeight : armCounter * limbWeight, 22, delta)
+        rig[0].rotation.z = THREE.MathUtils.damp(rig[0].rotation.z, falling ? -0.58 - fallWave * 0.28 : charging ? -0.34 - chargeLegBalance : -0.18 - pushLeft * 0.54, 22, delta)
+        rig[1].rotation.z = THREE.MathUtils.damp(rig[1].rotation.z, falling ? 0.58 - fallWave * 0.28 : charging ? 0.34 + chargeLegBalance : 0.18 + pushRight * 0.54, 22, delta)
+        rig[2].rotation.z = THREE.MathUtils.damp(rig[2].rotation.z, falling ? -1.16 - fallWave * 0.34 : charging ? -0.62 - Math.abs(chargeArmSwing) * 0.18 : -0.48 - armLeftOut * 0.78, 22, delta)
+        rig[3].rotation.z = THREE.MathUtils.damp(rig[3].rotation.z, falling ? 1.16 - fallWave * 0.34 : charging ? 0.62 + Math.abs(chargeArmSwing) * 0.18 : 0.48 + armRightOut * 0.78, 22, delta)
       } else if (spec.motion === 'bird') {
-        const shortStep = moving ? stride * 0.82 : phase === 'ready' ? readyCrouch * 0.28 : 0
+        const shortStep = moving ? stride * (0.82 + launchStage * 0.28) : charging ? chargeCrouch * 0.28 : 0
         const wingBalance = moving ? stride * 0.34 : idle ? Math.sin(time * 2.1) * 0.08 : 0
-        rig[0].rotation.z = THREE.MathUtils.damp(rig[0].rotation.z, braking ? -0.68 - brakeTremor : shortStep, 24, delta)
-        rig[1].rotation.z = THREE.MathUtils.damp(rig[1].rotation.z, braking ? 0.68 + brakeTremor : -shortStep, 24, delta)
-        rig[2].rotation.x = THREE.MathUtils.damp(rig[2].rotation.x, braking ? -0.92 - brakeArmSwing : -0.25 - wingBalance, 22, delta)
-        rig[3].rotation.x = THREE.MathUtils.damp(rig[3].rotation.x, braking ? 0.92 - brakeArmSwing : 0.25 + wingBalance, 22, delta)
+        rig[0].rotation.z = THREE.MathUtils.damp(rig[0].rotation.z, charging ? -0.68 - chargeTremor : shortStep, 24, delta)
+        rig[1].rotation.z = THREE.MathUtils.damp(rig[1].rotation.z, charging ? 0.68 + chargeTremor : -shortStep, 24, delta)
+        rig[2].rotation.x = THREE.MathUtils.damp(rig[2].rotation.x, charging ? -0.92 - chargeArmSwing : -0.25 - wingBalance, 22, delta)
+        rig[3].rotation.x = THREE.MathUtils.damp(rig[3].rotation.x, charging ? 0.92 - chargeArmSwing : 0.25 + wingBalance, 22, delta)
       } else {
         const frogKick = spec.motion === 'frog' ? Math.max(0, stride) * 0.95 : stride * 0.72
-        const diagonal = moving ? frogKick : phase === 'ready' ? readyCrouch * 0.24 : 0
-        const brakePawWave = braking ? Math.sin(brakeAge * 12.1) * 0.16 : 0
-        ;[0, 3].forEach(index => { rig[index].rotation.z = THREE.MathUtils.damp(rig[index].rotation.z, falling ? 0.74 + fallWave * 0.45 : braking ? 0.68 + brakePawWave : diagonal, 22, delta) })
-        ;[1, 2].forEach(index => { rig[index].rotation.z = THREE.MathUtils.damp(rig[index].rotation.z, falling ? -0.74 + fallWave * 0.45 : braking ? -0.52 - brakePawWave : -diagonal, 22, delta) })
+        const diagonal = moving ? frogKick * (1 + launchStage * 0.3) : charging ? chargeCrouch * 0.38 : 0
+        const chargePawWave = charging ? Math.sin(chargeAge * 12.1) * 0.16 : 0
+        ;[0, 3].forEach(index => { rig[index].rotation.z = THREE.MathUtils.damp(rig[index].rotation.z, falling ? 0.74 + fallWave * 0.45 : charging ? 0.68 + chargePawWave : diagonal, 22, delta) })
+        ;[1, 2].forEach(index => { rig[index].rotation.z = THREE.MathUtils.damp(rig[index].rotation.z, falling ? -0.74 + fallWave * 0.45 : charging ? -0.52 - chargePawWave : -diagonal, 22, delta) })
         rig.forEach((limb, index) => {
           const side = index % 2 === 0 ? -1 : 1
-          limb.rotation.x = THREE.MathUtils.damp(limb.rotation.x, falling ? side * (0.68 + fallWave * 0.32) : braking ? side * (0.52 + brakeTremor) : side * Math.abs(diagonal) * 0.34, 20, delta)
+          limb.rotation.x = THREE.MathUtils.damp(limb.rotation.x, falling ? side * (0.68 + fallWave * 0.32) : charging ? side * (0.52 + chargeTremor) : side * Math.abs(diagonal) * 0.34, 20, delta)
         })
       }
     }
@@ -456,7 +461,7 @@ function AssetCharacter({ id, x, braking, phase, velocity }: { id: CharacterId; 
   )
 }
 
-export function LowPolyPenguin({ x, braking, phase, velocity }: { x: number; braking: boolean; phase: GamePhase; velocity: number }) {
+export function LowPolyPenguin({ x, charging, phase, velocity }: { x: number; charging: boolean; phase: GamePhase; velocity: number }) {
   const group = useRef<THREE.Group>(null)
   const wingBack = useRef<THREE.Mesh>(null)
   const wingFront = useRef<THREE.Mesh>(null)
@@ -464,27 +469,27 @@ export function LowPolyPenguin({ x, braking, phase, velocity }: { x: number; bra
   const footFront = useRef<THREE.Mesh>(null)
   const fallStart = useRef<number | null>(null)
   const phaseStart = useRef(performance.now())
-  const brakeStart = useRef<number | null>(null)
+  const chargeStart = useRef<number | null>(null)
   const falling = phase === 'falling' || phase === 'gameover'
 
   useEffect(() => {
     phaseStart.current = performance.now()
     if (phase === 'falling') fallStart.current = performance.now()
-    if (phase === 'awaiting' || phase === 'ready' || phase === 'playing') fallStart.current = null
+    if (phase === 'awaiting' || phase === 'charging' || phase === 'playing') fallStart.current = null
   }, [phase])
 
   useEffect(() => {
-    brakeStart.current = braking ? performance.now() : null
-  }, [braking])
+    chargeStart.current = charging ? performance.now() : null
+  }, [charging])
 
   useFrame((state, delta) => {
     if (!group.current) return
     const targetX = screenToWorld(x + 29)
     const time = state.clock.elapsedTime
     const phaseAge = (performance.now() - phaseStart.current) / 1000
-    const brakeAge = brakeStart.current === null ? 0 : (performance.now() - brakeStart.current) / 1000
+    const chargeAge = chargeStart.current === null ? 0 : (performance.now() - chargeStart.current) / 1000
     const idle = phase === 'cover' || phase === 'awaiting' || phase === 'result'
-    const moving = phase === 'playing' && !braking
+    const moving = phase === 'playing' && !charging
     const fallElapsed = falling && fallStart.current !== null
       ? Math.min((performance.now() - fallStart.current) / 1250, 1)
       : 0
@@ -493,9 +498,9 @@ export function LowPolyPenguin({ x, braking, phase, velocity }: { x: number; bra
     const rhythmRaw = Math.sin(time * (moving ? 4.9 + velocity * 0.009 : Math.PI * 1.6))
     const rhythm = Math.sign(rhythmRaw) * Math.pow(Math.abs(rhythmRaw), 0.68)
     const breath = (Math.sin(time * Math.PI * 1.6) + 1) * 0.5
-    const readyAction = phase === 'ready' ? THREE.MathUtils.clamp((phaseAge - 0.08) / 0.44, 0, 1) : 0
+    const readyAction = phase === 'charging' ? THREE.MathUtils.clamp((phaseAge - 0.08) / 0.44, 0, 1) : 0
     const readyCrouch = Math.sin(readyAction * Math.PI)
-    const brakePunch = braking ? Math.min(brakeAge / 0.18, 1) : 0
+    const chargePunch = charging ? Math.min(chargeAge / 0.18, 1) : 0
     const bounce = idle ? breath * 0.055 : moving ? Math.abs(rhythmRaw) * 0.075 : 0
     group.current.position.x = THREE.MathUtils.damp(group.current.position.x, targetX, 28, delta)
     if (falling && fallStart.current !== null) {
@@ -506,25 +511,25 @@ export function LowPolyPenguin({ x, braking, phase, velocity }: { x: number; bra
       group.current.rotation.y = 0
     } else {
       group.current.visible = true
-      group.current.position.y = THREE.MathUtils.damp(group.current.position.y, 0.44 + bounce - readyCrouch * 0.11 - (braking ? 0.07 : 0), 18, delta)
-      group.current.rotation.z = THREE.MathUtils.damp(group.current.rotation.z, braking ? 0.3 * brakePunch : moving ? -0.08 : -0.025 + Math.sin(time * 2.1) * 0.018, 18, delta)
+      group.current.position.y = THREE.MathUtils.damp(group.current.position.y, 0.44 + bounce - readyCrouch * 0.11 - (charging ? 0.07 : 0), 18, delta)
+      group.current.rotation.z = THREE.MathUtils.damp(group.current.rotation.z, charging ? 0.3 * chargePunch : moving ? -0.08 : -0.025 + Math.sin(time * 2.1) * 0.018, 18, delta)
       group.current.rotation.x = THREE.MathUtils.damp(group.current.rotation.x, 0, 18, delta)
       group.current.rotation.y = THREE.MathUtils.damp(group.current.rotation.y, moving ? rhythm * 0.075 : idle ? Math.sin(time * 1.7) * 0.035 : 0, 14, delta)
       group.current.scale.x = THREE.MathUtils.damp(group.current.scale.x, 1 + readyCrouch * 0.06, 18, delta)
-      group.current.scale.y = THREE.MathUtils.damp(group.current.scale.y, braking ? 0.9 : 1 + breath * (idle ? 0.025 : 0) - readyCrouch * 0.11, 18, delta)
+      group.current.scale.y = THREE.MathUtils.damp(group.current.scale.y, charging ? 0.9 : 1 + breath * (idle ? 0.025 : 0) - readyCrouch * 0.11, 18, delta)
       group.current.scale.z = THREE.MathUtils.damp(group.current.scale.z, 1, 18, delta)
     }
 
     if (wingBack.current && wingFront.current && footBack.current && footFront.current) {
-      const brakeTremor = braking && brakeAge > 0.18 ? Math.sin(brakeAge * 30) * 0.05 : 0
-      const brakeWingSwing = braking ? Math.sin(Math.max(0, brakeAge - 0.08) * 12.1) * 0.28 * brakePunch : 0
+      const chargeTremor = charging && chargeAge > 0.18 ? Math.sin(chargeAge * 30) * 0.05 : 0
+      const chargeWingSwing = charging ? Math.sin(Math.max(0, chargeAge - 0.08) * 12.1) * 0.28 * chargePunch : 0
       const wingSwing = moving ? rhythm * 0.68 : idle ? Math.sin(time * 1.9) * 0.12 : readyCrouch * 0.2
-      wingBack.current.rotation.z = THREE.MathUtils.damp(wingBack.current.rotation.z, falling ? 1.28 + fallWave * 0.34 : braking ? 1.08 + brakeWingSwing + brakeTremor : 0.56 + wingSwing, 22, delta)
-      wingFront.current.rotation.z = THREE.MathUtils.damp(wingFront.current.rotation.z, falling ? -1.28 + fallWave * 0.34 : braking ? -1.08 + brakeWingSwing - brakeTremor : -0.56 - wingSwing, 22, delta)
-      footBack.current.position.x = THREE.MathUtils.damp(footBack.current.position.x, falling ? -0.58 - fallWave * 0.2 : -0.24 + (moving ? Math.max(0, rhythm) * -0.5 : braking ? -0.24 : 0), 22, delta)
-      footFront.current.position.x = THREE.MathUtils.damp(footFront.current.position.x, falling ? 0.68 - fallWave * 0.2 : 0.34 + (moving ? Math.max(0, -rhythm) * -0.5 : braking ? 0.4 : 0), 22, delta)
-      footBack.current.rotation.z = THREE.MathUtils.damp(footBack.current.rotation.z, falling ? -0.72 - fallWave * 0.42 : moving ? -Math.max(0, rhythm) * 0.62 : braking ? -0.52 - brakeTremor : 0, 22, delta)
-      footFront.current.rotation.z = THREE.MathUtils.damp(footFront.current.rotation.z, falling ? 0.72 - fallWave * 0.42 : moving ? Math.max(0, -rhythm) * 0.62 : braking ? 0.58 + brakeTremor : 0, 22, delta)
+      wingBack.current.rotation.z = THREE.MathUtils.damp(wingBack.current.rotation.z, falling ? 1.28 + fallWave * 0.34 : charging ? 1.08 + chargeWingSwing + chargeTremor : 0.56 + wingSwing, 22, delta)
+      wingFront.current.rotation.z = THREE.MathUtils.damp(wingFront.current.rotation.z, falling ? -1.28 + fallWave * 0.34 : charging ? -1.08 + chargeWingSwing - chargeTremor : -0.56 - wingSwing, 22, delta)
+      footBack.current.position.x = THREE.MathUtils.damp(footBack.current.position.x, falling ? -0.58 - fallWave * 0.2 : -0.24 + (moving ? Math.max(0, rhythm) * -0.5 : charging ? -0.24 : 0), 22, delta)
+      footFront.current.position.x = THREE.MathUtils.damp(footFront.current.position.x, falling ? 0.68 - fallWave * 0.2 : 0.34 + (moving ? Math.max(0, -rhythm) * -0.5 : charging ? 0.4 : 0), 22, delta)
+      footBack.current.rotation.z = THREE.MathUtils.damp(footBack.current.rotation.z, falling ? -0.72 - fallWave * 0.42 : moving ? -Math.max(0, rhythm) * 0.62 : charging ? -0.52 - chargeTremor : 0, 22, delta)
+      footFront.current.rotation.z = THREE.MathUtils.damp(footFront.current.rotation.z, falling ? 0.72 - fallWave * 0.42 : moving ? Math.max(0, -rhythm) * 0.62 : charging ? 0.58 + chargeTremor : 0, 22, delta)
     }
   })
 
@@ -570,9 +575,10 @@ export function LowPolyPenguin({ x, braking, phase, velocity }: { x: number; bra
   )
 }
 
-function SnowSpray({ x, active }: { x: number; active: boolean }) {
+function SnowSpray({ x, phase: gamePhase }: { x: number; phase: GamePhase }) {
   const group = useRef<THREE.Group>(null)
   const phase = useRef(0)
+  const launchStarted = useRef<number | null>(null)
   const seeds = useMemo(() => Array.from({ length: 9 }, (_, i) => ({
     x: -0.2 - (i % 3) * 0.2,
     y: 0.12 + (i % 4) * 0.13,
@@ -580,8 +586,15 @@ function SnowSpray({ x, active }: { x: number; active: boolean }) {
     scale: 0.06 + (i % 3) * 0.025,
   })), [])
 
+  useEffect(() => {
+    launchStarted.current = gamePhase === 'playing' ? performance.now() : null
+  }, [gamePhase])
+
   useFrame((_, delta) => {
-    if (!group.current || !active) return
+    if (!group.current || launchStarted.current === null) return
+    const age = (performance.now() - launchStarted.current) / 1000
+    group.current.visible = age < 0.5
+    group.current.scale.setScalar(Math.max(0.2, 1 - age * 0.65))
     phase.current += delta * 4.5
     group.current.children.forEach((child, i) => {
       const p = (phase.current + i * 0.13) % 1
@@ -591,9 +604,8 @@ function SnowSpray({ x, active }: { x: number; active: boolean }) {
     })
   })
 
-  if (!active) return null
   return (
-    <group ref={group} position={[screenToWorld(x + 10), 0.36, 0.1]}>
+    <group ref={group} visible={false} position={[screenToWorld(x + 10), 0.36, 0.1]}>
       {seeds.map((seed, i) => (
         <mesh key={i} position={[seed.x, seed.y, seed.z]} scale={seed.scale}>
           <icosahedronGeometry args={[1, 0]} />
@@ -1134,7 +1146,7 @@ function CharacterShatter({ x, characterId }: { x: number; characterId: Characte
   )
 }
 
-function World({ x, cliffX, braking, phase, rating, characterId, velocity, weather }: { x: number; cliffX: number; braking: boolean; phase: GamePhase; rating: Rating | null; characterId: CharacterId; velocity: number; weather: WeatherKind }) {
+function World({ x, cliffX, charging, chargePower, phase, rating, characterId, velocity, weather }: { x: number; cliffX: number; charging: boolean; chargePower: number; phase: GamePhase; rating: Rating | null; characterId: CharacterId; velocity: number; weather: WeatherKind }) {
   return (
     <>
       <fog attach="fog" args={['#10263b', 12, 28]} />
@@ -1156,13 +1168,13 @@ function World({ x, cliffX, braking, phase, rating, characterId, velocity, weath
       />
       <directionalLight color="#dfe8ff" intensity={0.18} position={[-9, 5, -3]} />
       <directionalLight color="#fff0d8" intensity={0.28} position={[-5, 7, -10]} />
-      <FollowCamera x={x} cliffX={cliffX} phase={phase} braking={braking} rating={rating} />
+      <FollowCamera x={x} cliffX={cliffX} phase={phase} charging={charging} chargePower={chargePower} rating={rating} />
 
       <DistantEasterEgg x={x} cliffX={cliffX} phase={phase} weather={weather} />
       <IcePlatform cliffX={cliffX} rating={rating} />
-      <AssetCharacter id={characterId} x={x} braking={braking} phase={phase} velocity={velocity} />
+      <AssetCharacter id={characterId} x={x} charging={charging} chargePower={chargePower} phase={phase} velocity={velocity} />
       {(phase === 'falling' || phase === 'gameover') && <CharacterShatter x={x} characterId={characterId} />}
-      <SnowSpray x={x} active={braking && phase === 'playing'} />
+      <SnowSpray x={x} phase={phase} />
       {phase === 'success' && rating && rating !== 'early' && <VictoryBurst x={x} rating={rating} />}
       {(phase === 'earlyFail' || (phase === 'result' && rating === 'early')) && <EarlyFailureMeasure x={x} cliffX={cliffX} />}
       <EdgeCrystals cliffX={cliffX} visible={phase === 'result' && rating === 'edge'} />
@@ -1186,7 +1198,7 @@ function World({ x, cliffX, braking, phase, rating, characterId, velocity, weath
   )
 }
 
-export default function EdgeBrakeScene(props: { x: number; cliffX: number; braking: boolean; phase: GamePhase; rating: Rating | null; characterId: CharacterId; preloadCharacterId?: CharacterId; velocity: number; weather: WeatherKind }) {
+export default function EdgeBrakeScene(props: { x: number; cliffX: number; charging: boolean; chargePower: number; phase: GamePhase; rating: Rating | null; characterId: CharacterId; preloadCharacterId?: CharacterId; velocity: number; weather: WeatherKind }) {
   useEffect(() => {
     useGLTF.preload(CHARACTER_BY_ID[props.preloadCharacterId ?? nextRosterCharacter(props.characterId).id].modelUrl)
   }, [props.characterId, props.preloadCharacterId])

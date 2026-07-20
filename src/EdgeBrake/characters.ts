@@ -19,7 +19,8 @@ export interface CharacterSpec {
   nameEn: string
   category: CharacterCategory
   motion: CharacterMotion
-  friction: number
+  weight: number
+  speed: number
   cost: number
   scale: number
   headingYaw: number
@@ -33,14 +34,24 @@ const spriteUrls = import.meta.glob('./assets/characters/*.png', { eager: true, 
 const isCharacterCategory = (category: string): category is CharacterCategory => CHARACTER_CATEGORIES.includes(category as CharacterCategory)
 const catalogCharacters = assetCatalog.assets.filter(asset => isCharacterCategory(asset.category)) as unknown as CatalogCharacter[]
 
-const ANIMAL_GRIP: Record<string, number> = {
-  pig: 1.14, cow: 1.1, cat: 1.08, fox: 1.05, chicken: 1.15, frog: 1.24,
-  dog: 1.08, sheep: 1.13, rabbit: 1.18, bear: 1.18, duck: 1.16,
+const ANIMAL_WEIGHT: Record<string, number> = {
+  pig: 92, cow: 180, cat: 28, fox: 34, chicken: 18, frog: 22,
+  dog: 38, sheep: 75, rabbit: 26, bear: 210, duck: 20,
 }
 
-const SPECIAL_GRIP: Record<string, number> = {
-  punk: 0.84, ghost: 0.82, skeleton: 0.78, combatMech: 1.16, minotaur: 1.14,
-  swat: 1.08, viking: 1.12, bigGuy: 1.14, werewolf: 1.12,
+const SPECIAL_WEIGHT: Record<string, number> = {
+  kid: 32, teen: 48, bigGuy: 125, ghost: 24, skeleton: 32, zombie: 78,
+  werewolf: 105, swat: 95, viking: 112, combatMech: 240, minotaur: 190,
+}
+
+const ANIMAL_SPEED: Record<string, number> = {
+  pig: 3.0, cow: 2.7, cat: 4.6, fox: 4.8, chicken: 3.8, frog: 4.1,
+  dog: 4.5, sheep: 3.2, rabbit: 5.0, bear: 2.8, duck: 3.7,
+}
+
+const SPECIAL_SPEED: Record<string, number> = {
+  kid: 4.5, teen: 4.3, bigGuy: 3.0, ghost: 4.8, skeleton: 4.4, zombie: 2.6,
+  werewolf: 4.2, swat: 3.7, viking: 3.2, combatMech: 2.8, minotaur: 3.3,
 }
 
 function motionFor(category: CharacterCategory, id: string): CharacterMotion {
@@ -52,11 +63,20 @@ function motionFor(category: CharacterCategory, id: string): CharacterMotion {
   return 'human'
 }
 
-function frictionFor(asset: CatalogCharacter) {
-  if (SPECIAL_GRIP[asset.id]) return SPECIAL_GRIP[asset.id]
-  if (asset.category === 'animals') return ANIMAL_GRIP[asset.id] ?? 1.08
-  const [width, height] = asset.footprint
-  return Number(Math.min(1.16, Math.max(0.86, 0.79 + (width / height) * 0.62)).toFixed(2))
+function weightFor(asset: CatalogCharacter) {
+  if (SPECIAL_WEIGHT[asset.id]) return SPECIAL_WEIGHT[asset.id]
+  if (asset.category === 'animals') return ANIMAL_WEIGHT[asset.id] ?? 45
+  const [width, height, depth] = asset.footprint
+  const categoryMass = asset.category === 'monsters' ? 20 : asset.category === 'office' ? 7 : asset.category === 'archetypes' ? 10 : 0
+  return Math.round(Math.min(165, Math.max(42, 34 + width * height * depth * 10 + categoryMass)))
+}
+
+function speedFor(asset: CatalogCharacter, motion: CharacterMotion) {
+  if (SPECIAL_SPEED[asset.id]) return SPECIAL_SPEED[asset.id]
+  if (asset.category === 'animals') return ANIMAL_SPEED[asset.id] ?? 3.8
+  const [, height] = asset.footprint
+  const motionBias = motion === 'mech' ? -0.65 : motion === 'hover' ? 0.65 : 0
+  return Number(Math.min(4.7, Math.max(2.6, 3.75 + (height - 2.7) * 0.32 + motionBias)).toFixed(1))
 }
 
 function scaleFor(asset: CatalogCharacter, motion: CharacterMotion) {
@@ -83,7 +103,8 @@ export const CHARACTERS: CharacterSpec[] = catalogCharacters.map((asset, rosterI
     nameEn: asset.name_en,
     category: asset.category,
     motion,
-    friction: frictionFor(asset),
+    weight: weightFor(asset),
+    speed: speedFor(asset, motion),
     cost: Math.min(260, 12 + rosterIndex * 5),
     scale: scaleFor(asset, motion),
     headingYaw: asset.category === 'animals' ? 0 : Math.PI / 2,

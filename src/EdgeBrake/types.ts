@@ -3,7 +3,7 @@ export const FIELD_H = 700
 export const PENGUIN_W = 58
 export const CHARACTER_FRONT = 49
 
-export type GamePhase = 'cover' | 'awaiting' | 'ready' | 'playing' | 'success' | 'earlyFail' | 'result' | 'falling' | 'gameover'
+export type GamePhase = 'cover' | 'awaiting' | 'charging' | 'playing' | 'success' | 'earlyFail' | 'result' | 'falling' | 'gameover'
 export type Rating = 'edge' | 'great' | 'safe' | 'early'
 export type CharacterId = string
 export type WeatherKind = 'clear' | 'snow' | 'fog' | 'blizzard'
@@ -21,7 +21,8 @@ export interface ViewState {
   x: number
   velocity: number
   cliffX: number
-  isBraking: boolean
+  isCharging: boolean
+  chargePower: number
   score: number
   level: number
   combo: number

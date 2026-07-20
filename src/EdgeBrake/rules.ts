@@ -26,9 +26,12 @@ export function evaluateStop(distance: number, combo: number): StopEvaluation {
   } else if (distance <= 220) {
     rating = 'safe'
     points = 45
+  } else if (distance <= 320) {
+    rating = 'safe'
+    points = 30
   }
 
-  const passed = distance <= 220
+  const passed = distance <= 320
   const nextCombo = rating === 'edge' ? combo + 1 : 0
   const coins = (points === 100 ? 10 : points === 90 ? 8 : points === 75 ? 6 : points === 60 ? 5 : points === 45 ? 4 : 2) + Math.min(nextCombo, 3)
   return { rating, points, passed, nextCombo, coins }

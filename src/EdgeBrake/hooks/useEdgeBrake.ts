@@ -1,17 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { CHARACTERS, CHARACTER_BY_ID, CHARACTER_IDS, DEFAULT_CHARACTER_ID, nextRosterCharacter } from '../characters'
+import { CHARACTERS, CHARACTER_BY_ID, CHARACTER_IDS, DEFAULT_CHARACTER_ID, nextRosterCharacter, weatherForLevel } from '../characters'
+import { chargePowerForMs, launchVelocityFor, slideDecelerationFor } from '../physics'
 import { evaluateStop } from '../rules'
 import { CHARACTER_FRONT, FIELD_H, FIELD_W, type CharacterId, type RoundResult, type ViewState } from '../types'
 import { playSound } from '../utils/sounds'
 
 const START_X = 40
-const READY_MS = 520
-const STOP_HOLD_MS = 110
+const STOP_HOLD_MS = 140
 const FALL_MS = 1250
 const SUCCESS_MS = 1550
 const EARLY_FAIL_MS = 1450
-const START_SPEED = 160
-const BRAKE_FORCE = 225
 
 function randomCliff() {
   return 1820 + Math.round(Math.random() * 120)
@@ -46,30 +44,31 @@ function saveCollection(coins: number, unlocked: CharacterId[], characterId: Cha
 
 const initialState = (): ViewState => {
   const unlockedCharacters = readUnlocked()
-  return ({
-  phase: 'cover',
-  x: START_X,
-  velocity: 0,
-  cliffX: 1880,
-  isBraking: false,
-  score: 0,
-  level: 1,
-  combo: 0,
-  bestCombo: readNumber('edge_brake_best_combo', 0),
-  bestDistance: localStorage.getItem('edge_brake_best_distance') === null
-    ? null
-    : readNumber('edge_brake_best_distance', 0),
-  bestScore: readNumber('edge_brake_best_score', 0),
-  coins: readNumber('edge_brake_coins', 0),
-  runCoins: 0,
-  maxLevel: readNumber('edge_brake_max_level', 1),
-  characterId: readCharacter(unlockedCharacters),
-  unlockedCharacters,
-  newUnlock: null,
-  result: null,
-  eventKey: 0,
-  muted: localStorage.getItem('edge_brake_muted') === '1',
-  })
+  return {
+    phase: 'cover',
+    x: START_X,
+    velocity: 0,
+    cliffX: 1880,
+    isCharging: false,
+    chargePower: 0,
+    score: 0,
+    level: 1,
+    combo: 0,
+    bestCombo: readNumber('edge_brake_best_combo', 0),
+    bestDistance: localStorage.getItem('edge_brake_best_distance') === null
+      ? null
+      : readNumber('edge_brake_best_distance', 0),
+    bestScore: readNumber('edge_brake_best_score', 0),
+    coins: readNumber('edge_brake_coins', 0),
+    runCoins: 0,
+    maxLevel: readNumber('edge_brake_max_level', 1),
+    characterId: readCharacter(unlockedCharacters),
+    unlockedCharacters,
+    newUnlock: null,
+    result: null,
+    eventKey: 0,
+    muted: localStorage.getItem('edge_brake_muted') === '1',
+  }
 }
 
 export function useEdgeBrake() {
@@ -78,13 +77,14 @@ export function useEdgeBrake() {
   const rafRef = useRef(0)
   const loopGenerationRef = useRef(0)
   const lastTsRef = useRef(0)
-  const readyAtRef = useRef(0)
+  const chargeStartedAtRef = useRef(0)
+  const highChargeCueRef = useRef(false)
   const stopSinceRef = useRef<number | null>(null)
   const fallTimerRef = useRef<number | null>(null)
   const successTimerRef = useRef<number | null>(null)
   const earlyFailTimerRef = useRef<number | null>(null)
   const unlockTimerRef = useRef<number | null>(null)
-  const retryUnlockAtRef = useRef(0)
+  const inputUnlockAtRef = useRef(0)
 
   const commit = useCallback((next: ViewState | ((current: ViewState) => ViewState)) => {
     const value = typeof next === 'function' ? next(stateRef.current) : next
@@ -105,24 +105,26 @@ export function useEdgeBrake() {
 
   const beginRound = useCallback((level: number, characterId?: CharacterId, unlockedOverride?: CharacterId[], newUnlock: CharacterId | null = null) => {
     stopSinceRef.current = null
-    readyAtRef.current = performance.now()
+    highChargeCueRef.current = false
     const current = stateRef.current
     const unlocked = unlockedOverride ?? [...current.unlockedCharacters]
     const nextCharacterId = characterId && unlocked.includes(characterId) ? characterId : current.characterId
     const maxLevel = Math.max(current.maxLevel, level)
     saveCollection(current.coins, unlocked, nextCharacterId, maxLevel)
+    inputUnlockAtRef.current = performance.now() + 240
     commit({
       ...current,
-      phase: 'ready',
+      phase: 'awaiting',
       x: START_X,
-      velocity: START_SPEED,
+      velocity: 0,
       cliffX: randomCliff(),
       level,
       maxLevel,
       characterId: nextCharacterId,
       unlockedCharacters: unlocked,
       newUnlock,
-      isBraking: false,
+      isCharging: false,
+      chargePower: 0,
       result: null,
       eventKey: current.eventKey + 1,
     })
@@ -132,29 +134,53 @@ export function useEdgeBrake() {
     }
   }, [commit])
 
-  const start = useCallback(() => {
-    clearTimers()
+  const beginCharge = useCallback(() => {
     const current = stateRef.current
-    playSound('start', current.muted)
+    if ((current.phase !== 'cover' && current.phase !== 'awaiting') || performance.now() < inputUnlockAtRef.current) return
+    clearTimers()
+    const base = current.phase === 'cover'
+      ? { ...initialState(), muted: current.muted, cliffX: randomCliff(), eventKey: current.eventKey }
+      : current
+    chargeStartedAtRef.current = performance.now()
+    highChargeCueRef.current = false
+    stopSinceRef.current = null
+    playSound('charge', base.muted)
     commit({
-      ...initialState(),
-      phase: 'ready',
-      velocity: START_SPEED,
-      cliffX: randomCliff(),
-      muted: current.muted,
+      ...base,
+      phase: 'charging',
+      x: START_X,
+      velocity: 0,
+      isCharging: true,
+      chargePower: chargePowerForMs(0),
+      result: null,
+      eventKey: base.eventKey + 1,
+    })
+  }, [clearTimers, commit])
+
+  const releaseCharge = useCallback(() => {
+    const current = stateRef.current
+    if (current.phase !== 'charging') return
+    const power = chargePowerForMs(performance.now() - chargeStartedAtRef.current)
+    const velocity = launchVelocityFor(CHARACTER_BY_ID[current.characterId], power)
+    lastTsRef.current = performance.now()
+    playSound('launch', current.muted, power)
+    commit({
+      ...current,
+      phase: 'playing',
+      velocity,
+      isCharging: false,
+      chargePower: power,
       eventKey: current.eventKey + 1,
     })
-    readyAtRef.current = performance.now()
-    stopSinceRef.current = null
-    lastTsRef.current = performance.now()
-  }, [clearTimers, commit])
+  }, [commit])
 
   const prepareRetry = useCallback(() => {
     clearTimers()
     const current = stateRef.current
     const reset = initialState()
+    inputUnlockAtRef.current = performance.now() + 240
     stopSinceRef.current = null
-    retryUnlockAtRef.current = performance.now() + 500
+    highChargeCueRef.current = false
     commit({
       ...reset,
       phase: 'awaiting',
@@ -164,21 +190,6 @@ export function useEdgeBrake() {
     })
     playSound('button', current.muted)
   }, [clearTimers, commit])
-
-  const launchPrepared = useCallback(() => {
-    const current = stateRef.current
-    if (current.phase !== 'awaiting' || performance.now() < retryUnlockAtRef.current) return
-    readyAtRef.current = performance.now()
-    stopSinceRef.current = null
-    lastTsRef.current = performance.now()
-    commit({
-      ...current,
-      phase: 'ready',
-      velocity: START_SPEED,
-      isBraking: false,
-      eventKey: current.eventKey + 1,
-    })
-  }, [commit])
 
   const finishRound = useCallback((distance: number) => {
     const current = stateRef.current
@@ -201,7 +212,7 @@ export function useEdgeBrake() {
       ...current,
       phase: passed ? 'success' : 'earlyFail',
       velocity: 0,
-      isBraking: true,
+      isCharging: false,
       score: nextScore,
       combo: nextCombo,
       bestScore: nextBestScore,
@@ -215,16 +226,15 @@ export function useEdgeBrake() {
 
     if (passed) {
       successTimerRef.current = window.setTimeout(() => {
-        commit(now => now.phase === 'success' ? { ...now, phase: 'result', isBraking: false } : now)
+        commit(now => now.phase === 'success' ? { ...now, phase: 'result' } : now)
         successTimerRef.current = null
       }, SUCCESS_MS)
     } else {
       earlyFailTimerRef.current = window.setTimeout(() => {
-        commit(now => now.phase === 'earlyFail' ? { ...now, phase: 'result', isBraking: false } : now)
+        commit(now => now.phase === 'earlyFail' ? { ...now, phase: 'result' } : now)
         earlyFailTimerRef.current = null
       }, EARLY_FAIL_MS)
     }
-
   }, [commit])
 
   const advanceResult = useCallback(() => {
@@ -233,15 +243,15 @@ export function useEdgeBrake() {
     if (current.phase !== 'result' || !current.result) return
     playSound('button', current.muted)
     if (!current.result.passed) {
-      stopSinceRef.current = null
-      retryUnlockAtRef.current = performance.now() + 500
+      inputUnlockAtRef.current = performance.now() + 240
       commit({
         ...current,
         phase: 'awaiting',
         x: START_X,
         velocity: 0,
         cliffX: randomCliff(),
-        isBraking: false,
+        isCharging: false,
+        chargePower: 0,
         result: null,
         eventKey: current.eventKey + 1,
       })
@@ -257,9 +267,9 @@ export function useEdgeBrake() {
     const current = stateRef.current
     if (current.phase === 'falling' || current.phase === 'gameover') return
     playSound('fall', current.muted)
-    commit({ ...current, phase: 'falling', isBraking: false, eventKey: current.eventKey + 1 })
+    commit({ ...current, phase: 'falling', isCharging: false, eventKey: current.eventKey + 1 })
     fallTimerRef.current = window.setTimeout(() => {
-      commit(now => ({ ...now, phase: 'gameover', velocity: 0, isBraking: false }))
+      commit(now => ({ ...now, phase: 'gameover', velocity: 0, isCharging: false }))
     }, FALL_MS)
   }, [commit])
 
@@ -268,35 +278,38 @@ export function useEdgeBrake() {
     const dt = Math.min((ts - lastTsRef.current) / 1000, 0.032)
     lastTsRef.current = ts
 
-    if (current.phase === 'ready' && ts - readyAtRef.current >= READY_MS) {
-      playSound('start', current.muted)
-      commit({ ...current, phase: 'playing' })
-    } else if (current.phase === 'playing') {
-      const maxSpeed = Math.min(390 + (current.level - 1) * 12, 480)
-      const runProgress = Math.min(1, Math.max(0, (current.x - START_X) / Math.max(1, current.cliffX - START_X)))
-      const acceleration = runProgress < 0.3 ? 65 : runProgress < 0.68 ? 160 : 95
-      let velocity = current.velocity
-      if (current.isBraking) velocity = Math.max(0, velocity - BRAKE_FORCE * CHARACTER_BY_ID[current.characterId].friction * dt)
-      else velocity = Math.min(maxSpeed, velocity + acceleration * dt)
-      const x = current.x + velocity * dt
-      const front = x + CHARACTER_FRONT
-
-      if (front > current.cliffX + 12) {
-        commit({ ...current, x, velocity })
-        fall()
-      } else if (current.isBraking && velocity < 3) {
-        if (stopSinceRef.current === null) stopSinceRef.current = ts
-        commit({ ...current, x, velocity })
-        if (ts - stopSinceRef.current >= STOP_HOLD_MS) {
-          finishRound(Math.max(0, Math.round(current.cliffX - front)))
-          stopSinceRef.current = null
-        }
-      } else {
-        stopSinceRef.current = null
-        commit({ ...current, x, velocity })
+    if (current.phase === 'charging') {
+      const chargePower = chargePowerForMs(ts - chargeStartedAtRef.current)
+      if (!highChargeCueRef.current && chargePower >= 0.82) {
+        highChargeCueRef.current = true
+        playSound('powerReady', current.muted)
       }
+      if (Math.abs(chargePower - current.chargePower) >= 0.002) commit({ ...current, chargePower })
+      return
     }
 
+    if (current.phase !== 'playing') return
+
+    const character = CHARACTER_BY_ID[current.characterId]
+    const deceleration = slideDecelerationFor(character, weatherForLevel(current.level))
+    const velocity = Math.max(0, current.velocity - deceleration * dt)
+    const x = current.x + (current.velocity + velocity) * 0.5 * dt
+    const front = x + CHARACTER_FRONT
+
+    if (front > current.cliffX + 12) {
+      commit({ ...current, x, velocity })
+      fall()
+    } else if (velocity < 3) {
+      if (stopSinceRef.current === null) stopSinceRef.current = ts
+      commit({ ...current, x, velocity })
+      if (ts - stopSinceRef.current >= STOP_HOLD_MS) {
+        finishRound(Math.max(0, Math.round(current.cliffX - front)))
+        stopSinceRef.current = null
+      }
+    } else {
+      stopSinceRef.current = null
+      commit({ ...current, x, velocity })
+    }
   }, [commit, fall, finishRound])
 
   useEffect(() => {
@@ -313,14 +326,6 @@ export function useEdgeBrake() {
       cancelAnimationFrame(rafRef.current)
     }
   }, [tick])
-
-  const triggerBrake = useCallback(() => {
-    const current = stateRef.current
-    if (current.phase !== 'playing') return
-    if (current.isBraking) return
-    playSound('brake', current.muted)
-    commit({ ...current, isBraking: true })
-  }, [commit])
 
   const toggleMuted = useCallback(() => {
     const next = !stateRef.current.muted
@@ -361,19 +366,23 @@ export function useEdgeBrake() {
 
   useEffect(() => {
     const keyDown = (event: KeyboardEvent) => {
-      if ((event.code === 'Space' || event.code === 'Enter') && !event.repeat) {
-        event.preventDefault()
-        if (stateRef.current.phase === 'cover') start()
-        else if (stateRef.current.phase === 'awaiting') launchPrepared()
-        else if (stateRef.current.phase === 'result') advanceResult()
-        else triggerBrake()
-      }
+      if ((event.code !== 'Space' && event.code !== 'Enter') || event.repeat) return
+      event.preventDefault()
+      if (stateRef.current.phase === 'result') advanceResult()
+      else beginCharge()
+    }
+    const keyUp = (event: KeyboardEvent) => {
+      if (event.code !== 'Space' && event.code !== 'Enter') return
+      event.preventDefault()
+      releaseCharge()
     }
     window.addEventListener('keydown', keyDown)
+    window.addEventListener('keyup', keyUp)
     return () => {
       window.removeEventListener('keydown', keyDown)
+      window.removeEventListener('keyup', keyUp)
     }
-  }, [advanceResult, launchPrepared, start, triggerBrake])
+  }, [advanceResult, beginCharge, releaseCharge])
 
   useEffect(() => () => clearTimers(), [clearTimers])
 
@@ -385,5 +394,5 @@ export function useEdgeBrake() {
     return () => window.removeEventListener('resize', compute)
   }, [])
 
-  return { view, scale, start, prepareRetry, launchPrepared, advanceResult, triggerBrake, toggleMuted, goHome, selectCharacter, buyCharacter }
+  return { view, scale, beginCharge, releaseCharge, prepareRetry, advanceResult, toggleMuted, goHome, selectCharacter, buyCharacter }
 }

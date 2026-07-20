@@ -4,7 +4,8 @@ import EdgeBrakeScene from './components/EdgeBrakeScene'
 import Watermark from './components/Watermark'
 import { useEdgeBrake } from './hooks/useEdgeBrake'
 import { createTranslator, detectLocale, type CopyKey } from './i18n'
-import { CHARACTER_FRONT, FIELD_H, FIELD_W, type CharacterId, type Rating } from './types'
+import { SURFACE_FACTOR } from './physics'
+import { FIELD_H, FIELD_W, type CharacterId, type Rating } from './types'
 import './EdgeBrake.less'
 
 function SoundIcon({ muted }: { muted: boolean }) {
@@ -37,16 +38,15 @@ function TouchAppIcon() {
 }
 
 export default function EdgeBrake() {
-  const { view, scale, start, prepareRetry, launchPrepared, advanceResult, triggerBrake, toggleMuted, goHome, selectCharacter, buyCharacter } = useEdgeBrake()
+  const { view, scale, beginCharge, releaseCharge, prepareRetry, advanceResult, toggleMuted, goHome, selectCharacter, buyCharacter } = useEdgeBrake()
   const [locale] = useState(detectLocale)
   const [rosterOpen, setRosterOpen] = useState(false)
   const [deniedCharacter, setDeniedCharacter] = useState<CharacterId | null>(null)
   const t = useMemo(() => createTranslator(locale), [locale])
-  const isInteractive = view.phase === 'playing' && !rosterOpen
+  const currentCharacter = CHARACTER_BY_ID[view.characterId]
+  const showChargeUi = (view.phase === 'cover' || view.phase === 'awaiting' || view.phase === 'charging') && !rosterOpen
   const showHud = view.phase !== 'cover'
   const weather = weatherForLevel(view.level)
-  const remaining = Math.max(0, Math.round(view.cliffX - (view.x + CHARACTER_FRONT)))
-  const danger = Math.min(1, Math.max(0, 1 - remaining / Math.max(1, view.cliffX - 40 - CHARACTER_FRONT)))
   const trackProgress = Math.min(1, Math.max(0, (view.x - 40) / Math.max(1, view.cliffX - 40)))
   const ratingCopy: Record<Rating, CopyKey> = {
     edge: 'edge', great: 'great', safe: 'safe', early: 'early',
@@ -57,22 +57,29 @@ export default function EdgeBrake() {
 
   return (
     <main
-      className={`eb eb--${view.phase}${view.isBraking ? ' eb--braking' : ''}`}
+      className={`eb eb--${view.phase}`}
       data-phase={view.phase}
       data-level={view.level}
       data-x={view.x.toFixed(2)}
       data-velocity={view.velocity.toFixed(2)}
       data-cliff={view.cliffX}
       data-character={view.characterId}
-      data-friction={CHARACTER_BY_ID[view.characterId].friction}
+      data-weight={currentCharacter.weight}
+      data-speed={currentCharacter.speed}
+      data-charge={view.chargePower.toFixed(3)}
       data-weather={weather}
       data-track-progress={trackProgress.toFixed(3)}
       data-speed-zone={trackProgress < 0.3 ? 'launch' : trackProgress < 0.68 ? 'boost' : 'cliff'}
       style={{ width: FIELD_W, height: FIELD_H, transform: `translate(-50%, -50%) scale(${scale})`, transformOrigin: 'center' }}
-      onPointerDown={() => {
-        if (view.phase === 'awaiting' && !rosterOpen) launchPrepared()
-        else if (isInteractive) triggerBrake()
+      onPointerDown={event => {
+        if (rosterOpen || (event.target as HTMLElement).closest('button')) return
+        if (view.phase === 'cover' || view.phase === 'awaiting') {
+          event.currentTarget.setPointerCapture(event.pointerId)
+          beginCharge()
+        }
       }}
+      onPointerUp={releaseCharge}
+      onPointerCancel={releaseCharge}
       onContextMenu={event => event.preventDefault()}
     >
       <div className="eb__sky" aria-hidden="true">
@@ -102,17 +109,34 @@ export default function EdgeBrake() {
       )}
 
       <section className="eb-stage" aria-label={t('title')}>
-        <EdgeBrakeScene x={view.x} cliffX={view.cliffX} braking={view.isBraking} phase={view.phase} rating={view.result?.rating ?? null} characterId={view.characterId} preloadCharacterId={nextResultCharacter.id} velocity={view.velocity} weather={weather} />
+        <EdgeBrakeScene x={view.x} cliffX={view.cliffX} charging={view.isCharging} chargePower={view.chargePower} phase={view.phase} rating={view.result?.rating ?? null} characterId={view.characterId} preloadCharacterId={nextResultCharacter.id} velocity={view.velocity} weather={weather} />
       </section>
 
       <Watermark />
 
-      {isInteractive && (
-        <div className={`eb-danger${danger > 0.72 ? ' eb-danger--hot' : ''}`}>
-          <span>{t('cliffDistance')}</span>
-          <strong>{remaining}<small>px</small></strong>
-          <i><b style={{ transform: `scaleX(${danger})` }} /></i>
-          <em>{t(`weather_${weather}` as CopyKey)}</em>
+      {view.phase === 'playing' && (
+        <div className="eb-surface">
+          <span>{t(`weather_${weather}` as CopyKey)}</span>
+          <strong>{t('surfaceResistance')} ×{SURFACE_FACTOR[weather].toFixed(2)}</strong>
+        </div>
+      )}
+
+      {showChargeUi && (
+        <div className={`eb-character-stats${view.phase === 'charging' ? ' eb-character-stats--charging' : ''}`}>
+          <strong>{characterName(view.characterId, locale)}</strong>
+          <span><i>{t('weight')}</i><b>{currentCharacter.weight}kg</b></span>
+          <span><i>{t('speed')}</i><b>{currentCharacter.speed.toFixed(1)}</b></span>
+        </div>
+      )}
+
+      {showChargeUi && (
+        <div className={`eb-charge${view.phase === 'charging' ? ' eb-charge--active' : ''}${view.chargePower >= 0.82 ? ' eb-charge--strong' : ''}`}>
+          <span className="eb-charge__finger"><TouchAppIcon /></span>
+          <div>
+            <strong>{view.phase === 'charging' ? t('releaseToLaunch') : t('holdToCharge')}</strong>
+            <span className="eb-charge__meter"><i style={{ transform: `scaleX(${view.phase === 'charging' ? view.chargePower : 0})` } as CSSProperties} /></span>
+          </div>
+          <em>{view.phase === 'charging' ? `${Math.round(view.chargePower * 100)}%` : t('hold')}</em>
         </div>
       )}
 
@@ -163,45 +187,18 @@ export default function EdgeBrake() {
       )}
 
       {view.phase === 'cover' && (
-        <section
-          className="eb-cover"
-          onPointerDown={event => { if (event.target === event.currentTarget || !(event.target as HTMLElement).closest('button')) start() }}
-        >
-          <button className="eb-cover__tap-surface" type="button" aria-label={t('tapStart')} onPointerDown={event => { event.stopPropagation(); start() }} />
+        <section className="eb-cover">
           <div className="eb-cover__eyebrow">SOUTH POLE BRAKE CLUB</div>
           <h1>{t('title')}</h1>
           <p>{t('subtitle')}</p>
           <div className="eb-cover__scene-space" aria-hidden="true" />
-          <div className="eb-touch-guide" aria-hidden="true">
-            <span><TouchAppIcon /></span>
-            <strong>{t('tapStart')}</strong>
-          </div>
           <button className="eb-crew-entry" type="button" onPointerDown={event => event.stopPropagation()} onClick={() => setRosterOpen(true)}>
             <span><CrewIcon /></span>
             <strong>{t('expedition')}</strong>
-            <em>{characterName(view.characterId, locale)} · ×{CHARACTER_BY_ID[view.characterId].friction.toFixed(2)}</em>
+            <em>{t('collection', { n: view.unlockedCharacters.length })}</em>
             <i><CoinIcon />{view.coins}</i>
           </button>
         </section>
-      )}
-
-      {view.phase === 'ready' && <div className="eb-ready" key={view.eventKey}>{t('ready')}</div>}
-
-      {view.phase === 'awaiting' && (
-        <div className="eb-retry-ready" key={view.eventKey} aria-hidden="true">
-          <span><TouchAppIcon /></span>
-          <strong>{t('tapStart')}</strong>
-        </div>
-      )}
-
-      {isInteractive && (
-        <div className={`eb-brake-hint${view.isBraking ? ' eb-brake-hint--active' : ''}`}>
-          <span className="eb-brake-hint__disc"><i /></span>
-          <div>
-            <strong>{view.isBraking ? t('release') : t('hold')}</strong>
-            <span className="eb-brake-hint__meter"><i style={{ transform: `scaleX(${Math.min(view.velocity / 250, 1)})` } as CSSProperties} /></span>
-          </div>
-        </div>
       )}
 
       {view.phase === 'gameover' && (
@@ -257,7 +254,10 @@ export default function EdgeBrake() {
                     <span className="eb-roster-card__portrait"><img src={character.spriteUrl} alt="" draggable={false} loading="lazy" /></span>
                     <strong>{characterName(character.id, locale)}</strong>
                     <span className="eb-roster-card__category">{t(`category_${character.category}` as CopyKey)}</span>
-                    <span className="eb-roster-card__grip"><i>{t('friction')}</i><b><em style={{ width: `${character.friction / 1.24 * 100}%` }} /></b><small>×{character.friction.toFixed(2)}</small></span>
+                    <span className="eb-roster-card__stats">
+                      <i>{t('weight')} <b>{character.weight}kg</b></i>
+                      <i>{t('speed')} <b>{character.speed.toFixed(1)}</b></i>
+                    </span>
                     <span className={`eb-roster-card__tag${selected ? ' is-selected' : unlocked ? ' is-owned' : ''}`}>
                       {selected ? t('inUse') : unlocked ? t('owned') : t('buy', { n: character.cost })}
                     </span>
