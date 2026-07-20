@@ -1,6 +1,6 @@
 import { useGLTF } from '@react-three/drei'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import * as THREE from 'three'
 import { CHARACTER_BY_ID, CHARACTERS, nextRosterCharacter } from '../characters'
 import type { CharacterId, GamePhase, Rating, WeatherKind } from '../types'
@@ -12,14 +12,20 @@ const C = {
   snow: '#eaf9f7',
   ice: '#5caeb7',
   iceDark: '#2f7482',
-  water: '#0b2030',
   teal: '#3fb6ac',
   gold: '#ffd166',
 }
 
 const screenToWorld = (px: number) => (px - 195) / 36
 
+const DISTANT_EASTER_EGG_IDS: CharacterId[] = [
+  'bear', 'cow', 'pig', 'fox',
+  'ghost', 'zombie', 'werewolf', 'mummy', 'skeleton',
+  'combatMech', 'minotaur',
+]
+
 useGLTF.preload(CHARACTERS[0].modelUrl)
+DISTANT_EASTER_EGG_IDS.forEach(id => useGLTF.preload(CHARACTER_BY_ID[id].modelUrl))
 
 function material(color: string, emissive?: string) {
   return <meshStandardMaterial color={color} flatShading roughness={0.88} metalness={0} emissive={emissive} emissiveIntensity={emissive ? 0.55 : 0} />
@@ -662,17 +668,170 @@ function WeatherFx({ weather, x }: { weather: WeatherKind; x: number }) {
   )
 }
 
+function DistantEasterEgg({ x, cliffX, phase, weather }: { x: number; cliffX: number; phase: GamePhase; weather: WeatherKind }) {
+  const { gl } = useThree()
+  const [entityId, setEntityId] = useState<CharacterId>(DISTANT_EASTER_EGG_IDS[0])
+  const root = useRef<THREE.Group>(null)
+  const model = useRef<THREE.Group>(null)
+  const playingStartedAt = useRef<number | null>(null)
+  const previousId = useRef<CharacterId>(DISTANT_EASTER_EGG_IDS[0])
+  const placement = useRef({ x: screenToWorld(1100), z: -16.4, mirror: 1 })
+  const reduceMotion = useMemo(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches, [])
+  const silhouetteMaterial = useMemo(() => new THREE.MeshStandardMaterial({
+    color: '#587583',
+    flatShading: true,
+    roughness: 1,
+    metalness: 0,
+    transparent: true,
+    opacity: 0,
+    depthWrite: false,
+    fog: false,
+    clippingPlanes: [new THREE.Plane(new THREE.Vector3(0, 1, 0), 1.15)],
+  }), [])
+  const spec = CHARACTER_BY_ID[entityId]
+  const gltf = useGLTF(spec.modelUrl)
+  const prepared = useMemo(() => {
+    const copy = gltf.scene.clone(true)
+    copy.updateMatrixWorld(true)
+    const bounds = new THREE.Box3().setFromObject(copy)
+    const center = bounds.getCenter(new THREE.Vector3())
+    const size = bounds.getSize(new THREE.Vector3())
+    copy.position.sub(center)
+    copy.traverse(object => {
+      if (object instanceof THREE.Mesh) {
+        const meshBounds = new THREE.Box3().setFromObject(object)
+        const meshSize = meshBounds.getSize(new THREE.Vector3())
+        const helperName = object.name.toLowerCase()
+        const flatHelper = meshSize.y < size.y * 0.08 && meshSize.x > size.x * 0.52 && meshSize.z > size.z * 0.52
+        if (flatHelper || /shadow|ground|floor|plane/.test(helperName)) {
+          object.visible = false
+          return
+        }
+        object.castShadow = false
+        object.receiveShadow = false
+        object.material = silhouetteMaterial
+      }
+    })
+    const targetHeight = spec.category === 'mechs' ? 34 : spec.category === 'animals' ? 28 : 31
+    return { copy, targetHeight, scale: targetHeight / Math.max(0.1, size.y) }
+  }, [gltf.scene, silhouetteMaterial, spec.category])
+
+  useEffect(() => {
+    if (phase !== 'playing') {
+      playingStartedAt.current = null
+      return
+    }
+    const candidates = DISTANT_EASTER_EGG_IDS.filter(id => id !== previousId.current)
+    const next = candidates[Math.floor(Math.random() * candidates.length)]
+    previousId.current = next
+    placement.current = {
+      x: screenToWorld(820 + Math.random() * 360),
+      z: -15 - Math.random() * 3,
+      mirror: Math.random() > 0.5 ? 1 : -1,
+    }
+    setEntityId(next)
+    playingStartedAt.current = performance.now()
+  }, [phase])
+
+  useEffect(() => {
+    gl.localClippingEnabled = true
+    gl.domElement.dataset.distantEasterEgg = entityId
+    return () => {
+      gl.localClippingEnabled = false
+      delete gl.domElement.dataset.distantEasterEgg
+    }
+  }, [entityId, gl])
+
+  useEffect(() => () => {
+    silhouetteMaterial.dispose()
+  }, [silhouetteMaterial])
+
+  useFrame((state, delta) => {
+    if (!root.current || !model.current) return
+    const progress = THREE.MathUtils.clamp((x - 40) / Math.max(1, cliffX - 40), 0, 1)
+    const age = playingStartedAt.current === null ? 0 : performance.now() - playingStartedAt.current
+    const reveal = phase === 'playing' ? THREE.MathUtils.smoothstep(age, 80, 600) : 0
+    const retreat = 1 - THREE.MathUtils.smoothstep(progress, 0.24, 0.36)
+    const weatherOpacity = weather === 'clear' ? 0.32 : weather === 'snow' ? 0.28 : weather === 'fog' ? 0.24 : 0.2
+    const targetOpacity = reveal * retreat * weatherOpacity
+    silhouetteMaterial.opacity = THREE.MathUtils.damp(silhouetteMaterial.opacity, targetOpacity, 3.1, delta)
+    root.current.visible = silhouetteMaterial.opacity > 0.004
+
+    const time = state.clock.elapsedTime
+    const animal = spec.category === 'animals'
+    const heavy = spec.category === 'mechs' || spec.category === 'mythic'
+    const cycle = animal ? 5.8 : heavy ? 7.2 : 6.4
+    const wave = reduceMotion ? 0 : Math.sin((time / cycle) * Math.PI * 2)
+    root.current.position.x = placement.current.x + (reduceMotion ? 0 : Math.sin(time * 0.18) * 0.18)
+    root.current.position.z = placement.current.z
+    model.current.position.y = -1.38 - prepared.targetHeight * 0.1 + wave * (animal ? 0.12 : heavy ? 0.04 : 0.08)
+    model.current.scale.setScalar(prepared.scale)
+    model.current.scale.x *= placement.current.mirror
+    model.current.rotation.y = animal ? 0.08 : 0.12
+    model.current.rotation.x = heavy ? wave * 0.025 : 0
+    model.current.rotation.z = !animal && !heavy ? wave * 0.03 : 0
+  })
+
+  return (
+    <group ref={root} visible={false} position={[screenToWorld(1100), 0, -16.4]}>
+      <group ref={model}>
+        <primitive object={prepared.copy} />
+      </group>
+    </group>
+  )
+}
+
 function IcePlatform({ cliffX, rating }: { cliffX: number; rating: Rating | null }) {
   const left = -5.45
   const edge = screenToWorld(cliffX)
   const width = edge - left
   const center = left + width / 2
+  const deepRoots = [
+    { from: 0.02, to: 0.18, depth: 94, zDepth: 4.18, color: '#347986' },
+    { from: 0.29, to: 0.47, depth: 14, zDepth: 3.72, color: '#3d8591' },
+    { from: 0.58, to: 0.73, depth: 102, zDepth: 4.08, color: '#327582' },
+    { from: 0.81, to: 0.9, depth: 8, zDepth: 3.48, color: '#3a818d' },
+  ]
+  const hangingBlocks = [
+    { from: 0.205, to: 0.245, depth: 4.8, zDepth: 2.6 },
+    { from: 0.255, to: 0.278, depth: 2.9, zDepth: 3.25 },
+    { from: 0.49, to: 0.54, depth: 5.6, zDepth: 2.82 },
+    { from: 0.545, to: 0.572, depth: 3.4, zDepth: 3.5 },
+    { from: 0.75, to: 0.792, depth: 4.2, zDepth: 2.48 },
+    { from: 0.915, to: 0.948, depth: 3.1, zDepth: 3.08 },
+  ]
   return (
     <group>
       <mesh receiveShadow position={[center - 0.12, -0.38, 0.18]} scale={[width + 0.16, 1.3, 4.5]}>
         <boxGeometry args={[1, 1, 1]} />
         {material('#397f8d')}
       </mesh>
+      {deepRoots.map(root => {
+        const rootWidth = Math.max(0.45, width * (root.to - root.from))
+        const rootX = left + width * ((root.from + root.to) / 2)
+        const rootTop = -0.96
+        const rootCenterY = rootTop - root.depth / 2
+        return (
+          <mesh key={`deep-root-${root.from}`} receiveShadow position={[rootX, rootCenterY, 0.18]} scale={[rootWidth, root.depth, root.zDepth]}>
+            <boxGeometry args={[1, 1, 1]} />
+            {material(root.color)}
+          </mesh>
+        )
+      })}
+      {hangingBlocks.map((block, index) => {
+        const blockWidth = Math.max(0.22, width * (block.to - block.from))
+        const blockX = left + width * ((block.from + block.to) / 2)
+        return (
+        <mesh
+          key={`hanging-block-${block.from}`}
+          position={[blockX, -0.96 - block.depth / 2, 0.18 + (index % 2 ? -0.22 : 0.16)]}
+          scale={[blockWidth, block.depth, block.zDepth]}
+        >
+          <boxGeometry args={[1, 1, 1]} />
+          {material(index % 2 ? '#438b95' : '#347986')}
+        </mesh>
+        )
+      })}
       <mesh receiveShadow position={[center - 0.04, 0.02, -0.04]} scale={[width + 0.08, 0.72, 4.36]}>
         <boxGeometry args={[1, 1, 1]} />
         {material(C.ice)}
@@ -999,11 +1158,7 @@ function World({ x, cliffX, braking, phase, rating, characterId, velocity, weath
       <directionalLight color="#fff0d8" intensity={0.28} position={[-5, 7, -10]} />
       <FollowCamera x={x} cliffX={cliffX} phase={phase} braking={braking} rating={rating} />
 
-      <mesh receiveShadow position={[5, -1.38, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <planeGeometry args={[64, 32]} />
-        {material(C.water)}
-      </mesh>
-
+      <DistantEasterEgg x={x} cliffX={cliffX} phase={phase} weather={weather} />
       <IcePlatform cliffX={cliffX} rating={rating} />
       <AssetCharacter id={characterId} x={x} braking={braking} phase={phase} velocity={velocity} />
       {(phase === 'falling' || phase === 'gameover') && <CharacterShatter x={x} characterId={characterId} />}
