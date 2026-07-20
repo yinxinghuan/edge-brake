@@ -32,6 +32,26 @@
     animation: eb-fall-shake 140ms linear 1;
   }
 
+  &--success::before {
+    content: '';
+    position: absolute;
+    inset: -18%;
+    z-index: 17;
+    pointer-events: none;
+    background: radial-gradient(circle at 56% 52%, rgba(255, 244, 189, 0.72) 0, rgba(105, 209, 181, 0.24) 18%, rgba(16, 38, 59, 0) 48%);
+    animation: eb-success-flash 760ms cubic-bezier(.16, .78, .28, 1) both;
+  }
+
+  &--earlyFail::before {
+    content: '';
+    position: absolute;
+    inset: -20% 0;
+    z-index: 17;
+    pointer-events: none;
+    background: linear-gradient(180deg, rgba(240, 100, 73, 0) 38%, rgba(240, 100, 73, 0.22) 48%, rgba(255, 209, 102, 0.08) 51%, rgba(240, 100, 73, 0) 61%);
+    animation: eb-early-fail-scan 920ms 90ms cubic-bezier(.2, .7, .25, 1) both;
+  }
+
   &__sky {
     position: absolute;
     inset: 0;
@@ -507,6 +527,43 @@
   &__crew svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
   &--edge { border-color: #8c6a19; }
   &--early .eb-round-result__score strong { color: #567071; }
+}
+
+.eb-success-callout {
+  position: absolute;
+  z-index: 23;
+  top: 96px;
+  left: 50%;
+  width: 250px;
+  pointer-events: none;
+  color: #fff9dc;
+  text-align: center;
+  text-shadow: 0 3px 0 rgba(16, 33, 41, 0.72), 0 0 18px rgba(255, 209, 102, 0.5);
+  transform: translateX(-50%);
+  animation: eb-success-callout 1080ms 180ms cubic-bezier(.16, .88, .25, 1) both;
+
+  span { display: block; color: @gold; font-size: 62px; line-height: 62px; font-weight: 900; font-variant-numeric: tabular-nums; letter-spacing: -.04em; }
+  span small { margin-left: 4px; font-size: 14px; letter-spacing: 0; }
+  strong { display: block; margin-top: 2px; font-size: 24px; line-height: 28px; font-weight: 900; letter-spacing: .04em; }
+  em { display: block; margin-top: 4px; color: #d7ece5; font-size: 12px; line-height: 16px; font-style: normal; font-weight: 900; }
+
+  &--safe span { color: #a9eee0; text-shadow: 0 3px 0 rgba(16, 33, 41, 0.72), 0 0 18px rgba(105, 209, 181, 0.58); }
+}
+
+.eb-early-fail-callout {
+  position: absolute;
+  z-index: 23;
+  top: 104px;
+  left: 50%;
+  width: 310px;
+  pointer-events: none;
+  text-align: center;
+  transform: translateX(-50%);
+  animation: eb-early-fail-callout 280ms 110ms cubic-bezier(.18, .82, .28, 1) both;
+
+  span { display: inline-block; padding: 7px 15px 6px; border: 3px solid @ink; border-radius: 9px; color: #fff; background: @coral; box-shadow: 0 5px 0 rgba(16, 33, 41, 0.55); font-size: 27px; line-height: 30px; font-weight: 900; letter-spacing: .06em; transform: rotate(-2deg); }
+  strong { display: block; margin-top: 12px; color: #fff8e5; font-size: 18px; line-height: 24px; font-weight: 900; text-shadow: 0 3px 0 rgba(16, 33, 41, 0.78); }
+  em { display: block; margin-top: 3px; color: #ffd9ca; font-size: 11px; line-height: 16px; font-style: normal; font-weight: 900; text-shadow: 0 2px 0 rgba(16, 33, 41, 0.8); }
 }
 
 .eb-crystals {
@@ -1082,6 +1139,10 @@
   100% { opacity: 0; transform: translate(calc((var(--i) - 8) * 5px), calc(-28px - var(--i) * 2px)) rotate(190deg) scale(1); }
 }
 @keyframes eb-edge-flash { from { opacity: 1; transform: scaleY(0.25); } to { opacity: 0; transform: scaleY(1.2); } }
+@keyframes eb-success-flash { 0% { opacity: 0; transform: scale(0.72); } 18% { opacity: 1; } 100% { opacity: 0; transform: scale(1.08); } }
+@keyframes eb-success-callout { 0% { opacity: 0; transform: translate(-50%, 16px) scale(0.72); } 18%, 72% { opacity: 1; transform: translate(-50%, 0) scale(1); } 100% { opacity: 0; transform: translate(-50%, -8px) scale(1.04); } }
+@keyframes eb-early-fail-scan { 0% { opacity: 0; transform: translateY(-28%); } 24%, 72% { opacity: 1; } 100% { opacity: 0; transform: translateY(28%); } }
+@keyframes eb-early-fail-callout { from { opacity: 0; transform: translate(-50%, -8px) scale(1.12); } to { opacity: 1; transform: translate(-50%, 0) scale(1); } }
 @keyframes eb-penguin-shatter-hold { 0%, 11% { transform: translateY(-3px); opacity: 1; } 12%, 100% { transform: translateY(-3px); opacity: 0; } }
 @keyframes eb-fall-shake { 0%, 100% { translate: 0 0; } 25% { translate: -4px 1px; } 60% { translate: 5px -1px; } }
 @keyframes eb-overlay-in { from { opacity: 0; } to { opacity: 1; } }

@@ -134,6 +134,22 @@ export default function EdgeBrake() {
         </section>
       )}
 
+      {view.phase === 'success' && view.result && (
+        <div className={`eb-success-callout eb-success-callout--${view.result.rating}`} key={`success-${view.eventKey}`} aria-live="polite">
+          <span>{view.result.points}<small>/100</small></span>
+          <strong>{t(ratingCopy[view.result.rating])}</strong>
+          <em>{t('distance', { n: view.result.distance })}</em>
+        </div>
+      )}
+
+      {view.phase === 'earlyFail' && view.result && (
+        <div className="eb-early-fail-callout" key={`early-fail-${view.eventKey}`} aria-live="polite">
+          <span>{t('earlyFailTitle')}</span>
+          <strong>{t('earlyFailReason')}</strong>
+          <em>{t('earlyFailRule')} · {t('distance', { n: view.result.distance })}</em>
+        </div>
+      )}
+
       {view.phase === 'falling' && <div className="eb-fall-copy">{t('fallen')}</div>}
 
       {view.newUnlock && (

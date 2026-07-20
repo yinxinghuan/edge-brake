@@ -26,7 +26,7 @@ function tone(frequency: number, duration: number, volume: number, type: Oscilla
   }
 }
 
-export function playSound(name: 'start' | 'brake' | 'safe' | 'great' | 'edge' | 'fall' | 'button' | 'coin' | 'unlock' | 'deny', muted: boolean) {
+export function playSound(name: 'start' | 'brake' | 'safe' | 'great' | 'edge' | 'earlyFail' | 'fall' | 'button' | 'coin' | 'unlock' | 'deny', muted: boolean) {
   if (muted) return
   if (name === 'start') tone(180, 0.1, 0.08, 'triangle', 0, 260)
   if (name === 'brake') tone(135, 0.15, 0.07, 'sawtooth', 0, 82)
@@ -39,6 +39,10 @@ export function playSound(name: 'start' | 'brake' | 'safe' | 'great' | 'edge' | 
     tone(520, 0.12, 0.12)
     tone(780, 0.14, 0.12, 'sine', 0.055)
     tone(1040, 0.16, 0.12, 'sine', 0.11)
+  }
+  if (name === 'earlyFail') {
+    tone(210, 0.16, 0.1, 'square', 0, 145)
+    tone(118, 0.26, 0.09, 'sawtooth', 0.12, 72)
   }
   if (name === 'fall') tone(160, 0.42, 0.13, 'sawtooth', 0, 55)
   if (name === 'button') tone(600, 0.045, 0.06)

@@ -8,6 +8,8 @@ const START_X = 40
 const READY_MS = 520
 const STOP_HOLD_MS = 110
 const FALL_MS = 1250
+const SUCCESS_MS = 1550
+const EARLY_FAIL_MS = 1450
 const START_SPEED = 160
 const BRAKE_FORCE = 225
 
@@ -79,6 +81,8 @@ export function useEdgeBrake() {
   const readyAtRef = useRef(0)
   const stopSinceRef = useRef<number | null>(null)
   const fallTimerRef = useRef<number | null>(null)
+  const successTimerRef = useRef<number | null>(null)
+  const earlyFailTimerRef = useRef<number | null>(null)
   const unlockTimerRef = useRef<number | null>(null)
   const retryUnlockAtRef = useRef(0)
 
@@ -90,8 +94,12 @@ export function useEdgeBrake() {
 
   const clearTimers = useCallback(() => {
     if (fallTimerRef.current !== null) window.clearTimeout(fallTimerRef.current)
+    if (successTimerRef.current !== null) window.clearTimeout(successTimerRef.current)
+    if (earlyFailTimerRef.current !== null) window.clearTimeout(earlyFailTimerRef.current)
     if (unlockTimerRef.current !== null) window.clearTimeout(unlockTimerRef.current)
     fallTimerRef.current = null
+    successTimerRef.current = null
+    earlyFailTimerRef.current = null
     unlockTimerRef.current = null
   }, [])
 
@@ -186,12 +194,12 @@ export function useEdgeBrake() {
     localStorage.setItem('edge_brake_best_combo', String(nextBestCombo))
     localStorage.setItem('edge_brake_best_distance', String(nextBestDistance))
     saveCollection(nextCoins, current.unlockedCharacters, current.characterId, current.maxLevel)
-    playSound(rating === 'edge' ? 'edge' : rating === 'great' ? 'great' : 'safe', current.muted)
+    playSound(rating === 'edge' ? 'edge' : rating === 'great' ? 'great' : rating === 'early' ? 'earlyFail' : 'safe', current.muted)
     window.setTimeout(() => playSound('coin', current.muted), 90)
 
     commit({
       ...current,
-      phase: 'result',
+      phase: passed ? 'success' : 'earlyFail',
       velocity: 0,
       isBraking: true,
       score: nextScore,
@@ -204,6 +212,18 @@ export function useEdgeBrake() {
       result,
       eventKey: current.eventKey + 1,
     })
+
+    if (passed) {
+      successTimerRef.current = window.setTimeout(() => {
+        commit(now => now.phase === 'success' ? { ...now, phase: 'result', isBraking: false } : now)
+        successTimerRef.current = null
+      }, SUCCESS_MS)
+    } else {
+      earlyFailTimerRef.current = window.setTimeout(() => {
+        commit(now => now.phase === 'earlyFail' ? { ...now, phase: 'result', isBraking: false } : now)
+        earlyFailTimerRef.current = null
+      }, EARLY_FAIL_MS)
+    }
 
   }, [commit])
 
