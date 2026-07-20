@@ -4,7 +4,7 @@ import { FIELD_H, FIELD_W, PENGUIN_FRONT, type CharacterId, type Rating, type Ro
 import { playSound } from '../utils/sounds'
 
 const START_X = 40
-const READY_MS = 1400
+const READY_MS = 520
 const STOP_HOLD_MS = 110
 const RESULT_MS = 850
 const FALL_MS = 650

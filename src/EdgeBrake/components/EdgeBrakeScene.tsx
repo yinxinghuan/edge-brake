@@ -1,4 +1,4 @@
-import { ContactShadows, useGLTF } from '@react-three/drei'
+import { useGLTF } from '@react-three/drei'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { useEffect, useMemo, useRef } from 'react'
 import * as THREE from 'three'
@@ -35,11 +35,11 @@ function FollowCamera({ x, cliffX, phase }: { x: number; cliffX: number; phase: 
   const lookXRef = useRef(screenToWorld(x + 29))
   const lookYRef = useRef(1.12)
   const fallStartRef = useRef<number | null>(null)
-  const readyStartRef = useRef<number | null>(null)
-  const readyFromPositionRef = useRef(new THREE.Vector3())
-  const readyFromLookXRef = useRef(0)
-  const readyFromLookYRef = useRef(0)
-  const readyFromZoomRef = useRef(64)
+  const playingStartRef = useRef<number | null>(null)
+  const playingFromPositionRef = useRef(new THREE.Vector3())
+  const playingFromLookXRef = useRef(0)
+  const playingFromLookYRef = useRef(0)
+  const playingFromZoomRef = useRef(64)
   const overviewPositionRef = useRef(new THREE.Vector3())
   const reduceMotion = useMemo(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches, [])
 
@@ -57,14 +57,14 @@ function FollowCamera({ x, cliffX, phase }: { x: number; cliffX: number; phase: 
   }, [phase])
 
   useEffect(() => {
-    if (phase === 'ready') {
-      readyStartRef.current = performance.now()
-      readyFromPositionRef.current.copy(cameraPositionRef.current)
-      readyFromLookXRef.current = lookXRef.current
-      readyFromLookYRef.current = lookYRef.current
-      readyFromZoomRef.current = camera.zoom
+    if (phase === 'playing') {
+      playingStartRef.current = performance.now()
+      playingFromPositionRef.current.copy(cameraPositionRef.current)
+      playingFromLookXRef.current = lookXRef.current
+      playingFromLookYRef.current = lookYRef.current
+      playingFromZoomRef.current = camera.zoom
     } else {
-      readyStartRef.current = null
+      playingStartRef.current = null
     }
   }, [camera, phase])
 
@@ -80,23 +80,30 @@ function FollowCamera({ x, cliffX, phase }: { x: number; cliffX: number; phase: 
       camera.zoom = THREE.MathUtils.damp(camera.zoom, 64 * renderScale, 4, delta)
     } else {
       const characterX = screenToWorld(x + 29)
-      const resetting = phase === 'result'
-      const danger = resetting || phase === 'ready' ? 0 : THREE.MathUtils.clamp((x + 49 - 40) / Math.max(1, cliffX - 40), 0, 1)
-      const tension = THREE.MathUtils.smoothstep(danger, 0.15, 0.98)
+      const danger = phase === 'playing' ? THREE.MathUtils.clamp((x + 49 - 40) / Math.max(1, cliffX - 40), 0, 1) : 0
+      const tension = THREE.MathUtils.smoothstep(danger, 0.3, 0.98)
       const startCharacterX = screenToWorld(40 + 29)
       const trackCenter = (startCharacterX + screenToWorld(cliffX)) / 2
       const falling = phase === 'falling' || phase === 'gameover'
       const fallProgress = fallStartRef.current === null ? 0 : Math.min((performance.now() - fallStartRef.current) / 650, 1)
+      const playingAge = playingStartRef.current === null ? 0 : performance.now() - playingStartRef.current
       const cameraResponse = falling ? 8.4 : 6.2
 
-      if (phase === 'ready' && readyStartRef.current !== null) {
-        const pullback = reduceMotion ? 1 : THREE.MathUtils.clamp((performance.now() - readyStartRef.current) / 780, 0, 1)
+      if (phase === 'ready' || phase === 'result') {
+        cameraPositionRef.current.x = THREE.MathUtils.damp(cameraPositionRef.current.x, startCharacterX - 2.1, 8.5, delta)
+        cameraPositionRef.current.y = THREE.MathUtils.damp(cameraPositionRef.current.y, 6.8, 8.5, delta)
+        cameraPositionRef.current.z = THREE.MathUtils.damp(cameraPositionRef.current.z, 9.6, 8.5, delta)
+        lookXRef.current = THREE.MathUtils.damp(lookXRef.current, startCharacterX + 0.12, 8.5, delta)
+        lookYRef.current = THREE.MathUtils.damp(lookYRef.current, 1.12, 8.5, delta)
+        camera.zoom = THREE.MathUtils.damp(camera.zoom, 64 * renderScale, 8.5, delta)
+      } else if (phase === 'playing' && playingStartRef.current !== null && playingAge < 1400) {
+        const pullback = reduceMotion ? 1 : THREE.MathUtils.clamp(playingAge / 780, 0, 1)
         const eased = 1 - Math.pow(1 - pullback, 3)
         overviewPositionRef.current.set(trackCenter - 3.2, 12.8, 19)
-        cameraPositionRef.current.lerpVectors(readyFromPositionRef.current, overviewPositionRef.current, eased)
-        lookXRef.current = THREE.MathUtils.lerp(readyFromLookXRef.current, trackCenter, eased)
-        lookYRef.current = THREE.MathUtils.lerp(readyFromLookYRef.current, 0.05, eased)
-        camera.zoom = THREE.MathUtils.lerp(readyFromZoomRef.current, 16.5 * renderScale, eased)
+        cameraPositionRef.current.lerpVectors(playingFromPositionRef.current, overviewPositionRef.current, eased)
+        lookXRef.current = THREE.MathUtils.lerp(playingFromLookXRef.current, trackCenter, eased)
+        lookYRef.current = THREE.MathUtils.lerp(playingFromLookYRef.current, 0.05, eased)
+        camera.zoom = THREE.MathUtils.lerp(playingFromZoomRef.current, 16.5 * renderScale, eased)
       } else if (falling) {
         cameraPositionRef.current.x = THREE.MathUtils.damp(cameraPositionRef.current.x, characterX + 3.6, cameraResponse, delta)
         cameraPositionRef.current.y = THREE.MathUtils.damp(cameraPositionRef.current.y, 4.2 - fallProgress * 0.45, cameraResponse, delta)
@@ -229,7 +236,7 @@ function AssetCharacter({ id, x, braking, phase, velocity }: { id: CharacterId; 
     const strideRaw = moving ? Math.sin(time * (5.8 + velocity * 0.038)) : 0
     const stride = Math.sign(strideRaw) * Math.pow(Math.abs(strideRaw), 0.68)
     const breath = (Math.sin(time * Math.PI * 1.6) + 1) * 0.5
-    const readyAction = phase === 'ready' ? THREE.MathUtils.clamp((phaseAge - 0.96) / 0.44, 0, 1) : 0
+    const readyAction = phase === 'ready' ? THREE.MathUtils.clamp((phaseAge - 0.08) / 0.44, 0, 1) : 0
     const readyCrouch = Math.sin(readyAction * Math.PI)
     const brakePunch = braking ? Math.min(brakeAge / 0.18, 1) : 0
     const bounce = idle ? breath * 0.035 : moving ? Math.abs(strideRaw) * 0.065 : 0
@@ -324,7 +331,7 @@ function LowPolyPenguin({ x, braking, phase, velocity }: { x: number; braking: b
     const rhythmRaw = Math.sin(time * (moving ? 5.8 + velocity * 0.038 : Math.PI * 1.6))
     const rhythm = Math.sign(rhythmRaw) * Math.pow(Math.abs(rhythmRaw), 0.68)
     const breath = (Math.sin(time * Math.PI * 1.6) + 1) * 0.5
-    const readyAction = phase === 'ready' ? THREE.MathUtils.clamp((phaseAge - 0.96) / 0.44, 0, 1) : 0
+    const readyAction = phase === 'ready' ? THREE.MathUtils.clamp((phaseAge - 0.08) / 0.44, 0, 1) : 0
     const readyCrouch = Math.sin(readyAction * Math.PI)
     const brakePunch = braking ? Math.min(brakeAge / 0.18, 1) : 0
     const bounce = idle ? breath * 0.055 : moving ? Math.abs(rhythmRaw) * 0.075 : 0
@@ -503,15 +510,15 @@ function IcePlatform({ cliffX, rating }: { cliffX: number; rating: Rating | null
   const center = left + width / 2
   return (
     <group>
-      <mesh castShadow receiveShadow position={[center - 0.12, -0.38, 0.18]} scale={[width + 0.16, 1.3, 4.5]}>
+      <mesh receiveShadow position={[center - 0.12, -0.38, 0.18]} scale={[width + 0.16, 1.3, 4.5]}>
         <boxGeometry args={[1, 1, 1]} />
         {material('#397f8d')}
       </mesh>
-      <mesh castShadow receiveShadow position={[center - 0.04, 0.02, -0.04]} scale={[width + 0.08, 0.72, 4.36]}>
+      <mesh receiveShadow position={[center - 0.04, 0.02, -0.04]} scale={[width + 0.08, 0.72, 4.36]}>
         <boxGeometry args={[1, 1, 1]} />
         {material(C.ice)}
       </mesh>
-      <mesh castShadow receiveShadow position={[center - 0.14, 0.41, 0]} scale={[Math.max(1, width - 0.28), 0.12, 4.25]}>
+      <mesh receiveShadow position={[center - 0.14, 0.41, 0]} scale={[Math.max(1, width - 0.28), 0.12, 4.25]}>
         <boxGeometry args={[1, 1, 1]} />
         {material(C.snow)}
       </mesh>
@@ -649,7 +656,6 @@ function OceanDetails({ cliffX }: { cliffX: number }) {
 }
 
 function World({ x, cliffX, braking, phase, rating, characterId, velocity, weather }: { x: number; cliffX: number; braking: boolean; phase: GamePhase; rating: Rating | null; characterId: CharacterId; velocity: number; weather: WeatherKind }) {
-  const runwayShadowCenter = (-5.45 + screenToWorld(cliffX)) / 2
   return (
     <>
       <fog attach="fog" args={['#10263b', 12, 28]} />
@@ -700,7 +706,6 @@ function World({ x, cliffX, braking, phase, rating, characterId, velocity, weath
         </group>
       ))}
 
-      <ContactShadows position={[runwayShadowCenter, -0.78, 0]} opacity={0.38} scale={36} blur={2.4} far={6} color="#07151e" />
     </>
   )
 }
