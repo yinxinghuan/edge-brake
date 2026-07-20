@@ -28,6 +28,15 @@ function CloseIcon() {
   return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg>
 }
 
+function GhostHand() {
+  return (
+    <svg viewBox="0 0 64 76" aria-hidden="true">
+      <path d="M26 35V15c0-5 8-5 8 0v16-11c0-5 8-5 8 0v13-8c0-5 8-5 8 0v15-6c0-5 8-5 8 0v18c0 12-8 20-21 20-9 0-14-4-19-11L8 48c-3-5 3-10 7-6l11 9" />
+      <circle cx="30" cy="13" r="11" />
+    </svg>
+  )
+}
+
 function PenguinPortrait() {
   return (
     <svg className="eb-character-portrait" viewBox="0 0 96 96" aria-hidden="true">
@@ -48,11 +57,12 @@ export default function EdgeBrake() {
   const [rosterOpen, setRosterOpen] = useState(false)
   const [deniedCharacter, setDeniedCharacter] = useState<CharacterId | null>(null)
   const t = useMemo(() => createTranslator(locale), [locale])
-  const isInteractive = (view.phase === 'ready' || view.phase === 'playing') && !rosterOpen
+  const isInteractive = view.phase === 'playing' && !rosterOpen
   const showHud = view.phase !== 'cover'
   const weather = weatherForLevel(view.level)
   const remaining = Math.max(0, Math.round(view.cliffX - (view.x + PENGUIN_FRONT)))
-  const danger = Math.min(1, Math.max(0, 1 - remaining / Math.max(1, view.cliffX - 64 - PENGUIN_FRONT)))
+  const danger = Math.min(1, Math.max(0, 1 - remaining / Math.max(1, view.cliffX - 48 - PENGUIN_FRONT)))
+  const trackProgress = Math.min(1, Math.max(0, (view.x - 48) / Math.max(1, view.cliffX - 48)))
   const ratingCopy: Record<Rating, CopyKey> = {
     edge: 'edge', great: 'great', safe: 'safe', early: 'early',
   }
@@ -68,6 +78,8 @@ export default function EdgeBrake() {
       data-character={view.characterId}
       data-friction={CHARACTER_BY_ID[view.characterId].friction}
       data-weather={weather}
+      data-track-progress={trackProgress.toFixed(3)}
+      data-speed-zone={trackProgress < 0.3 ? 'launch' : trackProgress < 0.68 ? 'boost' : 'cliff'}
       style={{ width: FIELD_W, height: FIELD_H, transform: `translate(-50%, -50%) scale(${scale})`, transformOrigin: 'center' }}
       onPointerDown={() => { if (isInteractive) triggerBrake() }}
       onContextMenu={event => event.preventDefault()}
@@ -131,24 +143,25 @@ export default function EdgeBrake() {
       )}
 
       {view.phase === 'cover' && (
-        <section className="eb-cover">
+        <section
+          className="eb-cover"
+          onPointerDown={event => { if (event.target === event.currentTarget || !(event.target as HTMLElement).closest('button')) start() }}
+        >
+          <button className="eb-cover__tap-surface" type="button" aria-label={t('tapStart')} onPointerDown={event => { event.stopPropagation(); start() }} />
           <div className="eb-cover__eyebrow">SOUTH POLE BRAKE CLUB</div>
           <h1>{t('title')}</h1>
           <p>{t('subtitle')}</p>
           <div className="eb-cover__scene-space" aria-hidden="true" />
-          <button className="eb-button" type="button" onPointerDown={event => { event.stopPropagation(); setRosterOpen(false); start() }}>
-            {t('start')}
-          </button>
+          <div className="eb-ghost-start" aria-hidden="true">
+            <span><GhostHand /></span>
+            <strong>{t('tapStart')}</strong>
+          </div>
           <button className="eb-crew-entry" type="button" onPointerDown={event => event.stopPropagation()} onClick={() => setRosterOpen(true)}>
             <span><CrewIcon /></span>
             <strong>{t('expedition')}</strong>
             <em>{t(`char_${view.characterId}` as CopyKey)} · ×{CHARACTER_BY_ID[view.characterId].friction.toFixed(2)}</em>
             <i><CoinIcon />{view.coins}</i>
           </button>
-          <div className="eb-cover__hint">
-            <span className="eb-press-icon"><i /></span>
-            <strong>{t('hold')}</strong>
-          </div>
         </section>
       )}
 

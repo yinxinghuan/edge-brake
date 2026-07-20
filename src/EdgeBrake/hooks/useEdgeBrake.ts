@@ -3,18 +3,17 @@ import { CHARACTER_BY_ID } from '../characters'
 import { FIELD_H, FIELD_W, PENGUIN_FRONT, type CharacterId, type Rating, type RoundResult, type ViewState } from '../types'
 import { playSound } from '../utils/sounds'
 
-const START_X = 64
-const READY_MS = 500
+const START_X = 48
+const READY_MS = 780
 const STOP_HOLD_MS = 110
 const RESULT_MS = 850
 const FALL_MS = 650
 const START_SPEED = 96
-const ACCELERATION = 70
 const BRAKE_FORCE = 250
 const CHARACTER_IDS: CharacterId[] = ['penguin', 'kid', 'granny', 'businessman', 'fox', 'frog', 'bear']
 
 function randomCliff() {
-  return 330 + Math.round(Math.random() * 20)
+  return 520 + Math.round(Math.random() * 40)
 }
 
 function readNumber(key: string, fallback: number) {
@@ -50,7 +49,7 @@ const initialState = (): ViewState => {
   phase: 'cover',
   x: START_X,
   velocity: 0,
-  cliffX: 340,
+  cliffX: 540,
   isBraking: false,
   score: 0,
   level: 1,
@@ -216,10 +215,12 @@ export function useEdgeBrake() {
       playSound('start', current.muted)
       commit({ ...current, phase: 'playing' })
     } else if (current.phase === 'playing') {
-      const maxSpeed = Math.min(238 + (current.level - 1) * 10, 330)
+      const maxSpeed = Math.min(225 + (current.level - 1) * 9, 315)
+      const runProgress = Math.min(1, Math.max(0, (current.x - START_X) / Math.max(1, current.cliffX - START_X)))
+      const acceleration = runProgress < 0.3 ? 28 : runProgress < 0.68 ? 74 : 42
       let velocity = current.velocity
       if (current.isBraking) velocity = Math.max(0, velocity - BRAKE_FORCE * CHARACTER_BY_ID[current.characterId].friction * dt)
-      else velocity = Math.min(maxSpeed, velocity + ACCELERATION * dt)
+      else velocity = Math.min(maxSpeed, velocity + acceleration * dt)
       const x = current.x + velocity * dt
       const front = x + PENGUIN_FRONT
 
@@ -258,7 +259,7 @@ export function useEdgeBrake() {
 
   const triggerBrake = useCallback(() => {
     const current = stateRef.current
-    if (current.phase !== 'ready' && current.phase !== 'playing') return
+    if (current.phase !== 'playing') return
     if (current.isBraking) return
     playSound('brake', current.muted)
     commit({ ...current, isBraking: true })
@@ -309,14 +310,15 @@ export function useEdgeBrake() {
     const keyDown = (event: KeyboardEvent) => {
       if ((event.code === 'Space' || event.code === 'Enter') && !event.repeat) {
         event.preventDefault()
-        triggerBrake()
+        if (stateRef.current.phase === 'cover') start()
+        else triggerBrake()
       }
     }
     window.addEventListener('keydown', keyDown)
     return () => {
       window.removeEventListener('keydown', keyDown)
     }
-  }, [triggerBrake])
+  }, [start, triggerBrake])
 
   useEffect(() => () => clearTimers(), [clearTimers])
 

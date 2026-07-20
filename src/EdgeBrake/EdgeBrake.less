@@ -466,7 +466,7 @@
 
 .eb-fall-copy {
   position: absolute;
-  top: 300px;
+  top: 168px;
   left: 50%;
   z-index: 20;
   padding: 9px 16px;
@@ -516,6 +516,23 @@
   padding: 104px 28px 36px;
   text-align: center;
   background: linear-gradient(180deg, rgba(9, 25, 38, 0.04), rgba(9, 25, 38, 0.28));
+  cursor: pointer;
+
+  > *:not(.eb-cover__tap-surface) { position: relative; z-index: 1; }
+
+  &__tap-surface {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+  }
+
+  &__tap-surface:focus-visible { outline: 3px solid #f7fbf6; outline-offset: -7px; }
 
   &__eyebrow {
     margin-bottom: 8px;
@@ -539,7 +556,7 @@
 
   p { margin-top: 8px; color: #c8dcda; font-size: 16px; line-height: 23px; font-weight: 700; }
 
-  &__scene-space { width: 1px; height: 194px; flex: 0 0 auto; }
+  &__scene-space { width: 1px; height: 220px; flex: 0 0 auto; }
 
   &__hint {
     display: flex;
@@ -552,6 +569,53 @@
   }
 }
 
+.eb-ghost-start {
+  width: 150px;
+  min-height: 58px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: #f7fbf6;
+  pointer-events: none;
+
+  > span {
+    position: relative;
+    width: 46px;
+    height: 56px;
+    display: grid;
+    place-items: center;
+    animation: eb-ghost-tap 4.6s cubic-bezier(.35, 0, .25, 1) infinite;
+  }
+
+  > span::after {
+    content: '';
+    position: absolute;
+    left: 7px;
+    top: 1px;
+    width: 28px;
+    height: 28px;
+    border: 2px solid @gold;
+    border-radius: 50%;
+    animation: eb-ghost-ring 4.6s ease-out infinite;
+  }
+
+  svg {
+    width: 42px;
+    height: 50px;
+    overflow: visible;
+    fill: rgba(9, 25, 38, 0.48);
+    stroke: #f7fbf6;
+    stroke-width: 3;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    filter: drop-shadow(0 3px 0 rgba(9, 25, 38, 0.45));
+  }
+
+  svg circle { fill: rgba(255, 209, 102, 0.12); stroke: @gold; stroke-width: 2; }
+  strong { font-size: 14px; line-height: 18px; font-weight: 900; letter-spacing: 0.04em; }
+}
+
 .eb-crew-entry {
   width: 226px;
   min-height: 58px;
@@ -560,7 +624,7 @@
   grid-template-rows: 22px 18px;
   align-items: center;
   column-gap: 9px;
-  margin-top: 18px;
+  margin-top: 10px;
   padding: 7px 11px;
   border: 2px solid rgba(234, 249, 247, 0.22);
   border-radius: 15px;
@@ -893,6 +957,17 @@
 @keyframes eb-wind { to { transform: translateX(22px) rotate(2deg); opacity: 0.5; } }
 @keyframes eb-combo-pop { 50% { transform: scale(1.25); } }
 @keyframes eb-finger-press { 0%, 100% { transform: translateY(-2px); } 45%, 65% { transform: translateY(3px) scaleY(0.86); } }
+@keyframes eb-ghost-tap {
+  0%, 12%, 76%, 100% { opacity: 0; transform: translate(15px, 14px) rotate(-8deg); }
+  22%, 40% { opacity: 0.92; transform: translate(0, 0) rotate(-8deg); }
+  31% { opacity: 1; transform: translate(0, 5px) rotate(-8deg) scale(0.96); }
+  56% { opacity: 0.82; transform: translate(0, 0) rotate(-8deg); }
+}
+@keyframes eb-ghost-ring {
+  0%, 24%, 100% { opacity: 0; transform: scale(0.5); }
+  31% { opacity: 0.95; transform: scale(0.72); }
+  48% { opacity: 0; transform: scale(1.45); }
+}
 @keyframes eb-ready { 0% { opacity: 0; transform: translate(-50%, 10px) scale(0.9); } 35%, 75% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -8px); } }
 @keyframes eb-snow-spray {
   0% { opacity: 0.95; transform: translate(0, 0) rotate(0); }
@@ -918,5 +993,6 @@
   }
 
   .eb__wind { display: none; }
+  .eb-ghost-start > span, .eb-ghost-start > span::after { animation: none !important; opacity: 1; transform: none; }
   .eb-crystals span:nth-child(n + 7) { display: none; }
 }
