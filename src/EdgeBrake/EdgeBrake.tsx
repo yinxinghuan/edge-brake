@@ -1,5 +1,4 @@
 import { useMemo, useState, type CSSProperties } from 'react'
-import aigramSrc from './img/aigram.svg'
 import { CHARACTERS, CHARACTER_BY_ID, characterName, nextRosterCharacter, weatherForLevel } from './characters'
 import EdgeBrakeScene from './components/EdgeBrakeScene'
 import { useEdgeBrake } from './hooks/useEdgeBrake'
@@ -267,8 +266,6 @@ export default function EdgeBrake() {
           </div>
         </section>
       )}
-
-      <img className="eb__watermark" src={aigramSrc} alt="" draggable={false} />
     </main>
   )
 }
