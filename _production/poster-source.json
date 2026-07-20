@@ -1,0 +1,8 @@
+{
+  "endpoint": "https://chat.aiwaves.tech/aigram/api/gen-image",
+  "origin": "https://aigram.app",
+  "generated_at": "2026-07-20T11:26:03.348963+00:00",
+  "generated_url": "https://cdn.aiwaves.tech/prod/telegram/avatar/0/1784546756001411.webp",
+  "ref_url": "https://cdn.aiwaves.tech/prod/telegram/avatar/0/1784546657001199.webp",
+  "prompt": "Preserve this exact full-bleed low-poly penguin, ice cliff, moon, ocean, color palette, square composition and the correctly spelled title EDGE BRAKE. Make only one correction: erase the tiny registered trademark R-in-a-circle symbol immediately to the upper right of the title, replacing it seamlessly with the same dark teal sky behind it. There must be absolutely no symbol, mark, dot or character after the final letter E. Do not change the title, penguin, ice, moon, layout or colors. No UI, no border, no watermark, no trademark symbol."
+}
