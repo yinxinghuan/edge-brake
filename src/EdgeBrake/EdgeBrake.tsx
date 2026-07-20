@@ -52,7 +52,7 @@ function PenguinPortrait() {
 }
 
 export default function EdgeBrake() {
-  const { view, scale, start, triggerBrake, toggleMuted, goHome, selectCharacter, buyCharacter } = useEdgeBrake()
+  const { view, scale, start, prepareRetry, launchPrepared, triggerBrake, toggleMuted, goHome, selectCharacter, buyCharacter } = useEdgeBrake()
   const [locale] = useState(detectLocale)
   const [rosterOpen, setRosterOpen] = useState(false)
   const [deniedCharacter, setDeniedCharacter] = useState<CharacterId | null>(null)
@@ -81,7 +81,10 @@ export default function EdgeBrake() {
       data-track-progress={trackProgress.toFixed(3)}
       data-speed-zone={trackProgress < 0.3 ? 'launch' : trackProgress < 0.68 ? 'boost' : 'cliff'}
       style={{ width: FIELD_W, height: FIELD_H, transform: `translate(-50%, -50%) scale(${scale})`, transformOrigin: 'center' }}
-      onPointerDown={() => { if (isInteractive) triggerBrake() }}
+      onPointerDown={() => {
+        if (view.phase === 'awaiting' && !rosterOpen) launchPrepared()
+        else if (isInteractive) triggerBrake()
+      }}
       onContextMenu={event => event.preventDefault()}
     >
       <div className="eb__sky" aria-hidden="true">
@@ -167,6 +170,13 @@ export default function EdgeBrake() {
 
       {view.phase === 'ready' && <div className="eb-ready" key={view.eventKey}>{t('ready')}</div>}
 
+      {view.phase === 'awaiting' && (
+        <div className="eb-retry-ready" key={view.eventKey} aria-hidden="true">
+          <span><GhostHand /></span>
+          <strong>{t('tapStart')}</strong>
+        </div>
+      )}
+
       {isInteractive && (
         <div className={`eb-brake-hint${view.isBraking ? ' eb-brake-hint--active' : ''}`}>
           <span className="eb-brake-hint__disc"><i /></span>
@@ -190,7 +200,7 @@ export default function EdgeBrake() {
               <div><dt>{t('coins')}</dt><dd className="eb-gameover__coin"><CoinIcon />{view.coins}</dd></div>
               <div><dt>{t('bestScore')}</dt><dd>{view.bestScore}</dd></div>
             </dl>
-            <button className="eb-button" type="button" onPointerDown={event => { event.stopPropagation(); setRosterOpen(false); start() }}>{t('again')}</button>
+            <button className="eb-button" type="button" onPointerDown={event => { event.stopPropagation(); setRosterOpen(false); prepareRetry() }}>{t('again')}</button>
             <button className="eb-gameover__crew" type="button" onPointerDown={event => event.stopPropagation()} onClick={() => setRosterOpen(true)}><CrewIcon />{t('expedition')}</button>
             <button className="eb-gameover__home" type="button" onPointerDown={event => event.stopPropagation()} onClick={goHome}>{t('home')}</button>
           </div>

@@ -7,13 +7,13 @@ const START_X = 40
 const READY_MS = 520
 const STOP_HOLD_MS = 110
 const RESULT_MS = 850
-const FALL_MS = 650
+const FALL_MS = 900
 const START_SPEED = 160
 const BRAKE_FORCE = 320
 const CHARACTER_IDS: CharacterId[] = ['penguin', 'kid', 'granny', 'businessman', 'fox', 'frog', 'bear']
 
 function randomCliff() {
-  return 760 + Math.round(Math.random() * 60)
+  return 1820 + Math.round(Math.random() * 120)
 }
 
 function readNumber(key: string, fallback: number) {
@@ -49,7 +49,7 @@ const initialState = (): ViewState => {
   phase: 'cover',
   x: START_X,
   velocity: 0,
-  cliffX: 790,
+  cliffX: 1880,
   isBraking: false,
   score: 0,
   level: 1,
@@ -143,6 +143,36 @@ export function useEdgeBrake() {
     stopSinceRef.current = null
     lastTsRef.current = performance.now()
   }, [clearTimers, commit])
+
+  const prepareRetry = useCallback(() => {
+    clearTimers()
+    const current = stateRef.current
+    const reset = initialState()
+    stopSinceRef.current = null
+    commit({
+      ...reset,
+      phase: 'awaiting',
+      cliffX: randomCliff(),
+      muted: current.muted,
+      eventKey: current.eventKey + 1,
+    })
+    playSound('button', current.muted)
+  }, [clearTimers, commit])
+
+  const launchPrepared = useCallback(() => {
+    const current = stateRef.current
+    if (current.phase !== 'awaiting') return
+    readyAtRef.current = performance.now()
+    stopSinceRef.current = null
+    lastTsRef.current = performance.now()
+    commit({
+      ...current,
+      phase: 'ready',
+      velocity: START_SPEED,
+      isBraking: false,
+      eventKey: current.eventKey + 1,
+    })
+  }, [commit])
 
   const finishRound = useCallback((distance: number) => {
     const current = stateRef.current
@@ -311,6 +341,7 @@ export function useEdgeBrake() {
       if ((event.code === 'Space' || event.code === 'Enter') && !event.repeat) {
         event.preventDefault()
         if (stateRef.current.phase === 'cover') start()
+        else if (stateRef.current.phase === 'awaiting') launchPrepared()
         else triggerBrake()
       }
     }
@@ -318,7 +349,7 @@ export function useEdgeBrake() {
     return () => {
       window.removeEventListener('keydown', keyDown)
     }
-  }, [start, triggerBrake])
+  }, [launchPrepared, start, triggerBrake])
 
   useEffect(() => () => clearTimers(), [clearTimers])
 
@@ -330,5 +361,5 @@ export function useEdgeBrake() {
     return () => window.removeEventListener('resize', compute)
   }, [])
 
-  return { view, scale, start, triggerBrake, toggleMuted, goHome, selectCharacter, buyCharacter }
+  return { view, scale, start, prepareRetry, launchPrepared, triggerBrake, toggleMuted, goHome, selectCharacter, buyCharacter }
 }

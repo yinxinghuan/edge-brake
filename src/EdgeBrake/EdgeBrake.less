@@ -377,7 +377,7 @@
   }
 
   &--falling {
-    animation: eb-penguin-fall 650ms cubic-bezier(.35, .05, .9, .55) forwards;
+    animation: eb-penguin-fall 900ms cubic-bezier(.35, .05, .9, .55) forwards;
 
     .eb-penguin__wing--back { transform: rotate(115deg); }
     .eb-penguin__wing--front { transform: rotate(-115deg); }
@@ -699,6 +699,33 @@
   animation: eb-ready 700ms ease-out both;
 }
 
+.eb-retry-ready {
+  position: absolute;
+  left: 50%;
+  bottom: 118px;
+  z-index: 22;
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  color: #f7fbf6;
+  font-size: 15px;
+  font-weight: 900;
+  transform: translateX(-50%);
+  pointer-events: none;
+
+  span {
+    width: 48px;
+    height: 56px;
+    color: #f7fbf6;
+    filter: drop-shadow(0 4px 0 rgba(9, 25, 38, 0.5));
+    animation: eb-ghost-tap 1.3s ease-in-out infinite;
+  }
+
+  svg { width: 100%; height: 100%; fill: rgba(247, 251, 246, 0.1); stroke: currentColor; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+  circle { fill: none; opacity: 0.5; }
+  strong { text-shadow: 0 2px 0 rgba(9, 25, 38, 0.62); }
+}
+
 .eb-brake-hint {
   position: absolute;
   left: 50%;
@@ -984,7 +1011,7 @@
   100% { opacity: 0; transform: translate(calc((var(--i) - 8) * 5px), calc(-28px - var(--i) * 2px)) rotate(190deg) scale(1); }
 }
 @keyframes eb-edge-flash { from { opacity: 1; transform: scaleY(0.25); } to { opacity: 0; transform: scaleY(1.2); } }
-@keyframes eb-penguin-fall { 0% { transform: rotate(4deg); } 18% { transform: rotate(-8deg) translateY(-3px); } 100% { transform: rotate(38deg) translateY(90px); } }
+@keyframes eb-penguin-fall { 0% { transform: rotate(4deg); } 14% { transform: rotate(-8deg) translateY(-3px); } 100% { transform: rotate(390deg) translateY(90px); } }
 @keyframes eb-fall-shake { 0%, 100% { translate: 0 0; } 25% { translate: -4px 1px; } 60% { translate: 5px -1px; } }
 @keyframes eb-overlay-in { from { opacity: 0; } to { opacity: 1; } }
 @keyframes eb-card-denied { 0%, 100% { transform: translateX(0); } 30% { transform: translateX(-4px); } 70% { transform: translateX(4px); } }
