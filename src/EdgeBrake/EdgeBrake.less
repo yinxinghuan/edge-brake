@@ -377,7 +377,7 @@
   }
 
   &--falling {
-    animation: eb-penguin-fall 900ms cubic-bezier(.35, .05, .9, .55) forwards;
+    animation: eb-penguin-shatter-hold 1250ms ease-out forwards;
 
     .eb-penguin__wing--back { transform: rotate(115deg); }
     .eb-penguin__wing--front { transform: rotate(-115deg); }
@@ -1011,7 +1011,7 @@
   100% { opacity: 0; transform: translate(calc((var(--i) - 8) * 5px), calc(-28px - var(--i) * 2px)) rotate(190deg) scale(1); }
 }
 @keyframes eb-edge-flash { from { opacity: 1; transform: scaleY(0.25); } to { opacity: 0; transform: scaleY(1.2); } }
-@keyframes eb-penguin-fall { 0% { transform: rotate(4deg); } 14% { transform: rotate(-8deg) translateY(-3px); } 100% { transform: rotate(390deg) translateY(90px); } }
+@keyframes eb-penguin-shatter-hold { 0%, 11% { transform: translateY(-3px); opacity: 1; } 12%, 100% { transform: translateY(-3px); opacity: 0; } }
 @keyframes eb-fall-shake { 0%, 100% { translate: 0 0; } 25% { translate: -4px 1px; } 60% { translate: 5px -1px; } }
 @keyframes eb-overlay-in { from { opacity: 0; } to { opacity: 1; } }
 @keyframes eb-card-denied { 0%, 100% { transform: translateX(0); } 30% { transform: translateX(-4px); } 70% { transform: translateX(4px); } }

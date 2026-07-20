@@ -200,7 +200,14 @@ export default function EdgeBrake() {
               <div><dt>{t('coins')}</dt><dd className="eb-gameover__coin"><CoinIcon />{view.coins}</dd></div>
               <div><dt>{t('bestScore')}</dt><dd>{view.bestScore}</dd></div>
             </dl>
-            <button className="eb-button" type="button" onPointerDown={event => { event.stopPropagation(); setRosterOpen(false); prepareRetry() }}>{t('again')}</button>
+            <button
+              className="eb-button"
+              type="button"
+              onPointerDown={event => event.stopPropagation()}
+              onClick={event => { event.stopPropagation(); setRosterOpen(false); prepareRetry() }}
+            >
+              {t('again')}
+            </button>
             <button className="eb-gameover__crew" type="button" onPointerDown={event => event.stopPropagation()} onClick={() => setRosterOpen(true)}><CrewIcon />{t('expedition')}</button>
             <button className="eb-gameover__home" type="button" onPointerDown={event => event.stopPropagation()} onClick={goHome}>{t('home')}</button>
           </div>

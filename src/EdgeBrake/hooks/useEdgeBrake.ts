@@ -7,7 +7,7 @@ const START_X = 40
 const READY_MS = 520
 const STOP_HOLD_MS = 110
 const RESULT_MS = 850
-const FALL_MS = 900
+const FALL_MS = 1250
 const START_SPEED = 160
 const BRAKE_FORCE = 320
 const CHARACTER_IDS: CharacterId[] = ['penguin', 'kid', 'granny', 'businessman', 'fox', 'frog', 'bear']
@@ -82,6 +82,7 @@ export function useEdgeBrake() {
   const resultTimerRef = useRef<number | null>(null)
   const fallTimerRef = useRef<number | null>(null)
   const unlockTimerRef = useRef<number | null>(null)
+  const retryUnlockAtRef = useRef(0)
 
   const commit = useCallback((next: ViewState | ((current: ViewState) => ViewState)) => {
     const value = typeof next === 'function' ? next(stateRef.current) : next
@@ -149,6 +150,7 @@ export function useEdgeBrake() {
     const current = stateRef.current
     const reset = initialState()
     stopSinceRef.current = null
+    retryUnlockAtRef.current = performance.now() + 500
     commit({
       ...reset,
       phase: 'awaiting',
@@ -161,7 +163,7 @@ export function useEdgeBrake() {
 
   const launchPrepared = useCallback(() => {
     const current = stateRef.current
-    if (current.phase !== 'awaiting') return
+    if (current.phase !== 'awaiting' || performance.now() < retryUnlockAtRef.current) return
     readyAtRef.current = performance.now()
     stopSinceRef.current = null
     lastTsRef.current = performance.now()

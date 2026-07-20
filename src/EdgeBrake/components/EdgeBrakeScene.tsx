@@ -86,7 +86,7 @@ function FollowCamera({ x, cliffX, phase, braking }: { x: number; cliffX: number
       const startCharacterX = screenToWorld(40 + 29)
       const trackCenter = (startCharacterX + screenToWorld(cliffX)) / 2
       const falling = phase === 'falling' || phase === 'gameover'
-      const fallProgress = fallStartRef.current === null ? 0 : Math.min((performance.now() - fallStartRef.current) / 900, 1)
+      const fallProgress = fallStartRef.current === null ? 0 : Math.min((performance.now() - fallStartRef.current) / 1250, 1)
       const playingAge = playingStartRef.current === null ? 0 : performance.now() - playingStartRef.current
       const cameraResponse = falling ? 8.4 : braking ? 10.5 : 6.2
 
@@ -107,11 +107,11 @@ function FollowCamera({ x, cliffX, phase, braking }: { x: number; cliffX: number
         camera.zoom = THREE.MathUtils.lerp(playingFromZoomRef.current, 6.8 * renderScale, eased)
       } else if (falling) {
         cameraPositionRef.current.x = THREE.MathUtils.damp(cameraPositionRef.current.x, characterX + 6.4, cameraResponse, delta)
-        cameraPositionRef.current.y = THREE.MathUtils.damp(cameraPositionRef.current.y, 4.6 - fallProgress * 0.45, cameraResponse, delta)
+        cameraPositionRef.current.y = THREE.MathUtils.damp(cameraPositionRef.current.y, 4.8 - fallProgress * 0.55, cameraResponse, delta)
         cameraPositionRef.current.z = THREE.MathUtils.damp(cameraPositionRef.current.z, 2.5, cameraResponse, delta)
         lookXRef.current = THREE.MathUtils.damp(lookXRef.current, characterX, cameraResponse, delta)
-        lookYRef.current = THREE.MathUtils.damp(lookYRef.current, 0.7 - fallProgress * 1.5, cameraResponse, delta)
-        camera.zoom = THREE.MathUtils.damp(camera.zoom, 78 * renderScale, cameraResponse, delta)
+        lookYRef.current = THREE.MathUtils.damp(lookYRef.current, 0.9 - fallProgress * 1.25, cameraResponse, delta)
+        camera.zoom = THREE.MathUtils.damp(camera.zoom, 74 * renderScale, cameraResponse, delta)
       } else {
         const targetCameraX = braking ? characterX + 6.2 : THREE.MathUtils.lerp(trackCenter - 4, characterX + 5.8, followBlend)
         const targetLookX = THREE.MathUtils.lerp(trackCenter, characterX, followBlend)
@@ -238,7 +238,7 @@ function AssetCharacter({ id, x, braking, phase, velocity }: { id: CharacterId; 
     const idle = phase === 'cover' || phase === 'awaiting' || phase === 'result'
     const falling = phase === 'falling' || phase === 'gameover'
     const fallElapsed = falling && fallStart.current !== null
-      ? Math.min((performance.now() - fallStart.current) / 900, 1)
+      ? Math.min((performance.now() - fallStart.current) / 1250, 1)
       : 0
     const airborne = THREE.MathUtils.clamp((fallElapsed - 0.08) / 0.92, 0, 1)
     const fallWave = Math.sin(airborne * Math.PI * 5)
@@ -253,13 +253,14 @@ function AssetCharacter({ id, x, braking, phase, velocity }: { id: CharacterId; 
 
     group.current.position.x = THREE.MathUtils.damp(group.current.position.x, targetX, 28, delta)
     if (falling && fallStart.current !== null) {
-      const spin = airborne * (2 - airborne)
-      group.current.position.y = 0.38 + Math.sin(fallElapsed * Math.PI) * 0.24 - fallElapsed * fallElapsed * 5.4
-      group.current.rotation.z = -spin * Math.PI * 2.15
-      group.current.rotation.x = Math.sin(airborne * Math.PI) * 0.26
-      group.current.rotation.y = spec.headingYaw + Math.sin(airborne * Math.PI) * 0.18
-      group.current.scale.setScalar(baseScale * (1 - fallElapsed * 0.16))
+      group.current.visible = fallElapsed < 0.115
+      group.current.position.y = 0.38 + Math.sin(Math.min(fallElapsed / 0.115, 1) * Math.PI) * 0.08
+      group.current.rotation.z = 0
+      group.current.rotation.x = 0
+      group.current.rotation.y = spec.headingYaw
+      group.current.scale.setScalar(baseScale)
     } else {
+      group.current.visible = true
       group.current.position.y = THREE.MathUtils.damp(group.current.position.y, 0.38, 18, delta)
       group.current.rotation.z = THREE.MathUtils.damp(group.current.rotation.z, moving ? stride * 0.025 : 0, 15, delta)
       group.current.rotation.x = THREE.MathUtils.damp(group.current.rotation.x, braking ? 0.24 * brakePunch : moving ? -0.14 : 0, 15, delta)
@@ -343,7 +344,7 @@ function LowPolyPenguin({ x, braking, phase, velocity }: { x: number; braking: b
     const idle = phase === 'cover' || phase === 'awaiting' || phase === 'result'
     const moving = phase === 'playing' && !braking
     const fallElapsed = falling && fallStart.current !== null
-      ? Math.min((performance.now() - fallStart.current) / 900, 1)
+      ? Math.min((performance.now() - fallStart.current) / 1250, 1)
       : 0
     const airborne = THREE.MathUtils.clamp((fallElapsed - 0.08) / 0.92, 0, 1)
     const fallWave = Math.sin(airborne * Math.PI * 5)
@@ -356,12 +357,13 @@ function LowPolyPenguin({ x, braking, phase, velocity }: { x: number; braking: b
     const bounce = idle ? breath * 0.055 : moving ? Math.abs(rhythmRaw) * 0.075 : 0
     group.current.position.x = THREE.MathUtils.damp(group.current.position.x, targetX, 28, delta)
     if (falling && fallStart.current !== null) {
-      const spin = airborne * (2 - airborne)
-      group.current.position.y = 0.44 + Math.sin(fallElapsed * Math.PI) * 0.24 - fallElapsed * fallElapsed * 5.2
-      group.current.rotation.z = -spin * Math.PI * 2.15
-      group.current.rotation.x = Math.sin(airborne * Math.PI) * 0.24
-      group.current.rotation.y = Math.sin(airborne * Math.PI) * 0.16
+      group.current.visible = fallElapsed < 0.115
+      group.current.position.y = 0.44 + Math.sin(Math.min(fallElapsed / 0.115, 1) * Math.PI) * 0.08
+      group.current.rotation.z = 0
+      group.current.rotation.x = 0
+      group.current.rotation.y = 0
     } else {
+      group.current.visible = true
       group.current.position.y = THREE.MathUtils.damp(group.current.position.y, 0.44 + bounce - readyCrouch * 0.11 - (braking ? 0.07 : 0), 18, delta)
       group.current.rotation.z = THREE.MathUtils.damp(group.current.rotation.z, braking ? 0.3 * brakePunch : moving ? -0.08 : -0.025 + Math.sin(time * 2.1) * 0.018, 18, delta)
       group.current.rotation.x = THREE.MathUtils.damp(group.current.rotation.x, 0, 18, delta)
@@ -675,6 +677,76 @@ function OceanDetails({ cliffX }: { cliffX: number }) {
   )
 }
 
+const SHATTER_PALETTES: Record<CharacterId, string[]> = {
+  penguin: [C.ink, C.cream, C.orange, '#263b44', '#f6f2df'],
+  kid: ['#6f3e24', '#d79967', '#2f9f98', '#315477', '#f0cf9f'],
+  granny: ['#d8d2c6', '#d39a73', '#8e5fa0', '#4b5c75', '#eee8dc'],
+  businessman: ['#4a3023', '#c98b62', '#28465f', '#17272d', '#d6b87b'],
+  fox: ['#c96d35', '#f4d8af', '#8b3e28', '#392d2a', '#fff1d2'],
+  frog: ['#4e9d62', '#a9d56c', '#2d6847', '#e8cf6e', '#eff6cf'],
+  bear: ['#76513b', '#a47755', '#4f392f', '#d6b28a', '#efe1c7'],
+}
+
+const SHATTER_LAYOUT = [
+  [-0.2, 1.62, -0.18, 0.28, 0], [0.2, 1.62, -0.18, 0.28, 1],
+  [-0.2, 1.62, 0.18, 0.28, 4], [0.2, 1.62, 0.18, 0.28, 0],
+  [-0.22, 1.12, -0.18, 0.34, 2], [0.22, 1.12, -0.18, 0.34, 2],
+  [-0.22, 1.12, 0.18, 0.34, 2], [0.22, 1.12, 0.18, 0.34, 4],
+  [0, 0.82, -0.52, 0.27, 3], [0, 0.82, 0.52, 0.27, 3],
+  [-0.2, 0.42, -0.15, 0.3, 3], [0.2, 0.42, -0.15, 0.3, 3],
+  [-0.2, 0.42, 0.15, 0.3, 3], [0.2, 0.42, 0.15, 0.3, 3],
+] as const
+
+function CharacterShatter({ x, characterId }: { x: number; characterId: CharacterId }) {
+  const pieces = useRef<THREE.Mesh[]>([])
+  const startedAt = useRef(performance.now())
+  const reduceMotion = useMemo(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches, [])
+  const palette = SHATTER_PALETTES[characterId]
+
+  useFrame(() => {
+    const elapsed = THREE.MathUtils.clamp((performance.now() - startedAt.current) / 1250, 0, 1)
+    const burst = THREE.MathUtils.clamp((elapsed - 0.105) / 0.895, 0, 1)
+    const eased = burst * (2 - burst)
+    pieces.current.forEach((piece, index) => {
+      if (!piece) return
+      const [baseX, baseY, baseZ] = SHATTER_LAYOUT[index]
+      const sideX = ((index * 37) % 7 - 3) * 0.14
+      const sideZ = ((index * 19) % 9 - 4) * 0.16
+      const lift = 0.48 + ((index * 11) % 5) * 0.1
+      piece.visible = elapsed >= 0.095
+      piece.position.set(
+        baseX + (0.28 + sideX) * eased,
+        baseY + lift * eased - (reduceMotion ? 1.15 : 2.15) * burst * burst,
+        baseZ + sideZ * eased,
+      )
+      const rotationScale = reduceMotion ? 0.22 : 1
+      piece.rotation.set(
+        eased * (0.6 + (index % 3) * 0.38) * rotationScale,
+        eased * ((index % 2 ? -1 : 1) * (0.8 + (index % 4) * 0.26)) * rotationScale,
+        eased * ((index % 3) - 1) * 0.72 * rotationScale,
+      )
+      const settleScale = elapsed > 0.86 ? 1 - (elapsed - 0.86) * 1.9 : 1
+      piece.scale.setScalar(Math.max(0.7, settleScale))
+    })
+  })
+
+  return (
+    <group position={[screenToWorld(x + 29), 0.05, 0.12]}>
+      {SHATTER_LAYOUT.map(([, , , size, colorIndex], index) => (
+        <mesh
+          key={index}
+          ref={mesh => { if (mesh) pieces.current[index] = mesh }}
+          castShadow
+          visible={false}
+        >
+          <boxGeometry args={[size, size, size]} />
+          {material(palette[colorIndex])}
+        </mesh>
+      ))}
+    </group>
+  )
+}
+
 function World({ x, cliffX, braking, phase, rating, characterId, velocity, weather }: { x: number; cliffX: number; braking: boolean; phase: GamePhase; rating: Rating | null; characterId: CharacterId; velocity: number; weather: WeatherKind }) {
   return (
     <>
@@ -708,6 +780,7 @@ function World({ x, cliffX, braking, phase, rating, characterId, velocity, weath
       {characterId === 'penguin'
         ? <LowPolyPenguin x={x} braking={braking} phase={phase} velocity={velocity} />
         : <AssetCharacter id={characterId} x={x} braking={braking} phase={phase} velocity={velocity} />}
+      {(phase === 'falling' || phase === 'gameover') && <CharacterShatter x={x} characterId={characterId} />}
       <SnowSpray x={x} active={braking && phase === 'playing'} />
       <EdgeCrystals cliffX={cliffX} visible={phase === 'result' && rating === 'edge'} />
       <OceanDetails cliffX={cliffX} />
