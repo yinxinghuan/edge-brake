@@ -3,17 +3,17 @@ import { CHARACTER_BY_ID } from '../characters'
 import { FIELD_H, FIELD_W, PENGUIN_FRONT, type CharacterId, type Rating, type RoundResult, type ViewState } from '../types'
 import { playSound } from '../utils/sounds'
 
-const START_X = 48
-const READY_MS = 780
+const START_X = 40
+const READY_MS = 1400
 const STOP_HOLD_MS = 110
 const RESULT_MS = 850
 const FALL_MS = 650
-const START_SPEED = 96
-const BRAKE_FORCE = 250
+const START_SPEED = 160
+const BRAKE_FORCE = 320
 const CHARACTER_IDS: CharacterId[] = ['penguin', 'kid', 'granny', 'businessman', 'fox', 'frog', 'bear']
 
 function randomCliff() {
-  return 520 + Math.round(Math.random() * 40)
+  return 760 + Math.round(Math.random() * 60)
 }
 
 function readNumber(key: string, fallback: number) {
@@ -49,7 +49,7 @@ const initialState = (): ViewState => {
   phase: 'cover',
   x: START_X,
   velocity: 0,
-  cliffX: 540,
+  cliffX: 790,
   isBraking: false,
   score: 0,
   level: 1,
@@ -215,9 +215,9 @@ export function useEdgeBrake() {
       playSound('start', current.muted)
       commit({ ...current, phase: 'playing' })
     } else if (current.phase === 'playing') {
-      const maxSpeed = Math.min(225 + (current.level - 1) * 9, 315)
+      const maxSpeed = Math.min(390 + (current.level - 1) * 12, 480)
       const runProgress = Math.min(1, Math.max(0, (current.x - START_X) / Math.max(1, current.cliffX - START_X)))
-      const acceleration = runProgress < 0.3 ? 28 : runProgress < 0.68 ? 74 : 42
+      const acceleration = runProgress < 0.3 ? 65 : runProgress < 0.68 ? 160 : 95
       let velocity = current.velocity
       if (current.isBraking) velocity = Math.max(0, velocity - BRAKE_FORCE * CHARACTER_BY_ID[current.characterId].friction * dt)
       else velocity = Math.min(maxSpeed, velocity + acceleration * dt)

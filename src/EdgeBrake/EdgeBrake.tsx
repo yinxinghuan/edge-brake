@@ -61,8 +61,8 @@ export default function EdgeBrake() {
   const showHud = view.phase !== 'cover'
   const weather = weatherForLevel(view.level)
   const remaining = Math.max(0, Math.round(view.cliffX - (view.x + PENGUIN_FRONT)))
-  const danger = Math.min(1, Math.max(0, 1 - remaining / Math.max(1, view.cliffX - 48 - PENGUIN_FRONT)))
-  const trackProgress = Math.min(1, Math.max(0, (view.x - 48) / Math.max(1, view.cliffX - 48)))
+  const danger = Math.min(1, Math.max(0, 1 - remaining / Math.max(1, view.cliffX - 40 - PENGUIN_FRONT)))
+  const trackProgress = Math.min(1, Math.max(0, (view.x - 40) / Math.max(1, view.cliffX - 40)))
   const ratingCopy: Record<Rating, CopyKey> = {
     edge: 'edge', great: 'great', safe: 'safe', early: 'early',
   }
