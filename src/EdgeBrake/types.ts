@@ -22,6 +22,7 @@ export interface ViewState {
   velocity: number
   cliffX: number
   isCharging: boolean
+  isAutoBraking: boolean
   chargePower: number
   score: number
   level: number

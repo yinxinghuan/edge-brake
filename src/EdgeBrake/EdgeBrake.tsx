@@ -48,6 +48,7 @@ export default function EdgeBrake() {
   const showHud = view.phase !== 'cover'
   const weather = weatherForLevel(view.level)
   const trackProgress = Math.min(1, Math.max(0, (view.x - 40) / Math.max(1, view.cliffX - 40)))
+  const remaining = Math.max(0, Math.round(view.cliffX - (view.x + 49)))
   const ratingCopy: Record<Rating, CopyKey> = {
     edge: 'edge', great: 'great', safe: 'safe', early: 'early',
   }
@@ -67,6 +68,7 @@ export default function EdgeBrake() {
       data-weight={currentCharacter.weight}
       data-speed={currentCharacter.speed}
       data-charge={view.chargePower.toFixed(3)}
+      data-auto-braking={view.isAutoBraking ? '1' : '0'}
       data-weather={weather}
       data-track-progress={trackProgress.toFixed(3)}
       data-speed-zone={trackProgress < 0.3 ? 'launch' : trackProgress < 0.68 ? 'boost' : 'cliff'}
@@ -109,19 +111,21 @@ export default function EdgeBrake() {
       )}
 
       <section className="eb-stage" aria-label={t('title')}>
-        <EdgeBrakeScene x={view.x} cliffX={view.cliffX} charging={view.isCharging} chargePower={view.chargePower} phase={view.phase} rating={view.result?.rating ?? null} characterId={view.characterId} preloadCharacterId={nextResultCharacter.id} velocity={view.velocity} weather={weather} />
+        <EdgeBrakeScene x={view.x} cliffX={view.cliffX} charging={view.isCharging} autoBraking={view.isAutoBraking} chargePower={view.chargePower} phase={view.phase} rating={view.result?.rating ?? null} characterId={view.characterId} preloadCharacterId={nextResultCharacter.id} velocity={view.velocity} weather={weather} />
       </section>
 
       <Watermark />
 
       {view.phase === 'playing' && (
-        <div className="eb-surface">
-          <span>{t(`weather_${weather}` as CopyKey)}</span>
-          <strong>{t('surfaceResistance')} ×{SURFACE_FACTOR[weather].toFixed(2)}</strong>
+        <div className={`eb-danger${view.isAutoBraking || trackProgress > 0.72 ? ' eb-danger--hot' : ''}`}>
+          <span>{t('cliffDistance')}</span>
+          <strong>{remaining}<small>px</small></strong>
+          <i><b style={{ transform: `scaleX(${trackProgress})` }} /></i>
+          <em>{t(`weather_${weather}` as CopyKey)} ×{SURFACE_FACTOR[weather].toFixed(2)}</em>
         </div>
       )}
 
-      {showChargeUi && (
+      {showChargeUi && view.phase !== 'cover' && (
         <div className={`eb-character-stats${view.phase === 'charging' ? ' eb-character-stats--charging' : ''}`}>
           <strong>{characterName(view.characterId, locale)}</strong>
           <span><i>{t('weight')}</i><b>{currentCharacter.weight}kg</b></span>

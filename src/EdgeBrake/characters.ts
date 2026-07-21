@@ -1,4 +1,4 @@
-import assetCatalog from './assets/characters/ASSETS.json'
+import assetCatalog from '../assets/characters/ASSETS.json'
 import type { CharacterId, WeatherKind } from './types'
 
 const CHARACTER_CATEGORIES = ['people', 'archetypes', 'monsters', 'office', 'villains', 'mechs', 'mythic', 'animals'] as const
@@ -29,8 +29,8 @@ export interface CharacterSpec {
   rosterIndex: number
 }
 
-const modelUrls = import.meta.glob('./assets/characters/*.glb', { eager: true, query: '?url', import: 'default' }) as Record<string, string>
-const spriteUrls = import.meta.glob('./assets/characters/*.png', { eager: true, import: 'default' }) as Record<string, string>
+const modelUrls = import.meta.glob('../assets/characters/*.glb', { eager: true, query: '?url', import: 'default' }) as Record<string, string>
+const spriteUrls = import.meta.glob('../assets/characters/*.png', { eager: true, import: 'default' }) as Record<string, string>
 const isCharacterCategory = (category: string): category is CharacterCategory => CHARACTER_CATEGORIES.includes(category as CharacterCategory)
 const catalogCharacters = assetCatalog.assets.filter(asset => isCharacterCategory(asset.category)) as unknown as CatalogCharacter[]
 
@@ -89,7 +89,7 @@ function scaleFor(asset: CatalogCharacter, motion: CharacterMotion) {
 }
 
 function assetUrl(category: string, id: string, extension: 'glb' | 'png') {
-  const key = `./assets/characters/${category}__${id}.${extension}`
+  const key = `../assets/characters/${category}__${id}.${extension}`
   const url = extension === 'glb' ? modelUrls[key] : spriteUrls[key]
   if (!url) throw new Error(`Missing character asset: ${key}`)
   return url

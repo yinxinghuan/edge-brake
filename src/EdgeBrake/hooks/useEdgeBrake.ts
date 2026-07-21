@@ -50,6 +50,7 @@ const initialState = (): ViewState => {
     velocity: 0,
     cliffX: 1880,
     isCharging: false,
+    isAutoBraking: false,
     chargePower: 0,
     score: 0,
     level: 1,
@@ -124,6 +125,7 @@ export function useEdgeBrake() {
       unlockedCharacters: unlocked,
       newUnlock,
       isCharging: false,
+      isAutoBraking: false,
       chargePower: 0,
       result: null,
       eventKey: current.eventKey + 1,
@@ -151,6 +153,7 @@ export function useEdgeBrake() {
       x: START_X,
       velocity: 0,
       isCharging: true,
+      isAutoBraking: false,
       chargePower: chargePowerForMs(0),
       result: null,
       eventKey: base.eventKey + 1,
@@ -169,6 +172,7 @@ export function useEdgeBrake() {
       phase: 'playing',
       velocity,
       isCharging: false,
+      isAutoBraking: false,
       chargePower: power,
       eventKey: current.eventKey + 1,
     })
@@ -226,12 +230,12 @@ export function useEdgeBrake() {
 
     if (passed) {
       successTimerRef.current = window.setTimeout(() => {
-        commit(now => now.phase === 'success' ? { ...now, phase: 'result' } : now)
+        commit(now => now.phase === 'success' ? { ...now, phase: 'result', isAutoBraking: false } : now)
         successTimerRef.current = null
       }, SUCCESS_MS)
     } else {
       earlyFailTimerRef.current = window.setTimeout(() => {
-        commit(now => now.phase === 'earlyFail' ? { ...now, phase: 'result' } : now)
+        commit(now => now.phase === 'earlyFail' ? { ...now, phase: 'result', isAutoBraking: false } : now)
         earlyFailTimerRef.current = null
       }, EARLY_FAIL_MS)
     }
@@ -251,6 +255,7 @@ export function useEdgeBrake() {
         velocity: 0,
         cliffX: randomCliff(),
         isCharging: false,
+        isAutoBraking: false,
         chargePower: 0,
         result: null,
         eventKey: current.eventKey + 1,
@@ -267,9 +272,9 @@ export function useEdgeBrake() {
     const current = stateRef.current
     if (current.phase === 'falling' || current.phase === 'gameover') return
     playSound('fall', current.muted)
-    commit({ ...current, phase: 'falling', isCharging: false, eventKey: current.eventKey + 1 })
+    commit({ ...current, phase: 'falling', isCharging: false, isAutoBraking: false, eventKey: current.eventKey + 1 })
     fallTimerRef.current = window.setTimeout(() => {
-      commit(now => ({ ...now, phase: 'gameover', velocity: 0, isCharging: false }))
+      commit(now => ({ ...now, phase: 'gameover', velocity: 0, isCharging: false, isAutoBraking: false }))
     }, FALL_MS)
   }, [commit])
 
@@ -293,22 +298,26 @@ export function useEdgeBrake() {
     const character = CHARACTER_BY_ID[current.characterId]
     const deceleration = slideDecelerationFor(character, weatherForLevel(current.level))
     const velocity = Math.max(0, current.velocity - deceleration * dt)
+    const remainingToCliff = Math.max(0, current.cliffX - (current.x + CHARACTER_FRONT))
+    const timeToCliff = remainingToCliff / Math.max(1, velocity)
+    const isAutoBraking = velocity > 3 && (velocity / deceleration <= 1.25 || timeToCliff <= 0.9)
+    if (isAutoBraking && !current.isAutoBraking) playSound('autoBrake', current.muted)
     const x = current.x + (current.velocity + velocity) * 0.5 * dt
     const front = x + CHARACTER_FRONT
 
     if (front > current.cliffX + 12) {
-      commit({ ...current, x, velocity })
+      commit({ ...current, x, velocity, isAutoBraking })
       fall()
     } else if (velocity < 3) {
       if (stopSinceRef.current === null) stopSinceRef.current = ts
-      commit({ ...current, x, velocity })
+      commit({ ...current, x, velocity, isAutoBraking: true })
       if (ts - stopSinceRef.current >= STOP_HOLD_MS) {
         finishRound(Math.max(0, Math.round(current.cliffX - front)))
         stopSinceRef.current = null
       }
     } else {
       stopSinceRef.current = null
-      commit({ ...current, x, velocity })
+      commit({ ...current, x, velocity, isAutoBraking })
     }
   }, [commit, fall, finishRound])
 

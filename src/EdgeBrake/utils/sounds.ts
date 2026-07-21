@@ -26,7 +26,7 @@ function tone(frequency: number, duration: number, volume: number, type: Oscilla
   }
 }
 
-export function playSound(name: 'charge' | 'powerReady' | 'launch' | 'safe' | 'great' | 'edge' | 'earlyFail' | 'fall' | 'button' | 'coin' | 'unlock' | 'deny', muted: boolean, intensity = 0.5) {
+export function playSound(name: 'charge' | 'powerReady' | 'launch' | 'autoBrake' | 'safe' | 'great' | 'edge' | 'earlyFail' | 'fall' | 'button' | 'coin' | 'unlock' | 'deny', muted: boolean, intensity = 0.5) {
   if (muted) return
   if (name === 'charge') tone(180, 0.14, 0.06, 'triangle', 0, 260)
   if (name === 'powerReady') tone(520, 0.055, 0.045)
@@ -35,6 +35,10 @@ export function playSound(name: 'charge' | 'powerReady' | 'launch' | 'safe' | 'g
     const startFrequency = 210 + power * 210
     tone(startFrequency, 0.12, 0.075 + power * 0.055, 'triangle', 0, startFrequency * 1.45)
     tone(88, 0.055, 0.045 + power * 0.035, 'square')
+  }
+  if (name === 'autoBrake') {
+    tone(260, 0.15, 0.075, 'square', 0, 150)
+    tone(90, 0.08, 0.055, 'triangle', 0.025, 62)
   }
   if (name === 'safe') tone(320, 0.09, 0.1)
   if (name === 'great') {
