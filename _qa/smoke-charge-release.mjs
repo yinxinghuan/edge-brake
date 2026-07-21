@@ -1,6 +1,7 @@
 import playwright from '/Users/yin/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs'
 
 const { chromium } = playwright
+const baseUrl = process.env.BASE_URL || 'http://127.0.0.1:4173/'
 const browser = await chromium.launch({ headless: true })
 const errors = []
 
@@ -9,7 +10,7 @@ async function pageForTest() {
   page.on('pageerror', error => errors.push(error.message))
   page.on('console', message => { if (message.type() === 'error') errors.push(message.text()) })
   await page.addInitScript(() => { Math.random = () => 0 })
-  await page.goto('http://127.0.0.1:4173/', { waitUntil: 'networkidle' })
+  await page.goto(baseUrl, { waitUntil: 'networkidle' })
   await page.waitForSelector('.eb[data-phase="cover"]')
   return page
 }

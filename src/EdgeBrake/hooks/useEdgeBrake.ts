@@ -10,6 +10,8 @@ const STOP_HOLD_MS = 140
 const FALL_MS = 1250
 const SUCCESS_MS = 1550
 const EARLY_FAIL_MS = 1450
+const AUTO_BRAKE_STOP_TIME = 1.8
+const AUTO_BRAKE_CLIFF_TIME = 1.3
 
 function randomCliff() {
   return 1820 + Math.round(Math.random() * 120)
@@ -152,6 +154,7 @@ export function useEdgeBrake() {
       phase: 'charging',
       x: START_X,
       velocity: 0,
+      newUnlock: null,
       isCharging: true,
       isAutoBraking: false,
       chargePower: chargePowerForMs(0),
@@ -300,7 +303,7 @@ export function useEdgeBrake() {
     const velocity = Math.max(0, current.velocity - deceleration * dt)
     const remainingToCliff = Math.max(0, current.cliffX - (current.x + CHARACTER_FRONT))
     const timeToCliff = remainingToCliff / Math.max(1, velocity)
-    const isAutoBraking = velocity > 3 && (velocity / deceleration <= 1.25 || timeToCliff <= 0.9)
+    const isAutoBraking = velocity > 3 && (velocity / deceleration <= AUTO_BRAKE_STOP_TIME || timeToCliff <= AUTO_BRAKE_CLIFF_TIME)
     if (isAutoBraking && !current.isAutoBraking) playSound('autoBrake', current.muted)
     const x = current.x + (current.velocity + velocity) * 0.5 * dt
     const front = x + CHARACTER_FRONT

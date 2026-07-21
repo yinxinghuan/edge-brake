@@ -382,12 +382,13 @@ function AssetCharacter({ id, x, charging, autoBraking, chargePower, phase, velo
     const stride = Math.sign(strideRaw) * Math.pow(Math.abs(strideRaw), 0.68)
     const breath = (Math.sin(time * Math.PI * 1.6) + 1) * 0.5
     const chargeCrouch = charging ? THREE.MathUtils.smoothstep(chargePower, 0, 1) : 0
-    const launchStage = moving ? THREE.MathUtils.clamp(1 - phaseAge / 0.62, 0, 1) : 0
+    const launchStage = moving ? THREE.MathUtils.clamp(1 - phaseAge / 0.36, 0, 1) : 0
+    const motionStride = stride * (0.08 + launchStage * 0.92)
     const chargePunch = charging ? Math.min(chargeAge / 0.18, 1) : 0
     const brakePunch = autoBraking ? Math.min(brakeAge / 0.18, 1) : 0
     const bounce = spec.motion === 'hover'
       ? (idle ? Math.sin(time * 2.2) * 0.06 : moving ? Math.sin(time * 4.2) * 0.045 : 0)
-      : idle ? breath * (spec.motion === 'mech' ? 0.018 : 0.035) : moving ? Math.abs(strideRaw) * (spec.motion === 'mech' ? 0.035 : 0.065) : 0
+      : idle ? breath * (spec.motion === 'mech' ? 0.018 : 0.035) : moving ? Math.abs(motionStride) * (spec.motion === 'mech' ? 0.035 : 0.065) : 0
     const baseScale = spec.scale
 
     group.current.position.x = THREE.MathUtils.damp(group.current.position.x, targetX, 28, delta)
@@ -401,7 +402,7 @@ function AssetCharacter({ id, x, charging, autoBraking, chargePower, phase, velo
     } else {
       group.current.visible = true
       group.current.position.y = THREE.MathUtils.damp(group.current.position.y, 0.38, 18, delta)
-      group.current.rotation.z = THREE.MathUtils.damp(group.current.rotation.z, moving ? stride * 0.025 : 0, 15, delta)
+      group.current.rotation.z = THREE.MathUtils.damp(group.current.rotation.z, moving ? motionStride * 0.025 : 0, 15, delta)
       const movingLean = spec.motion === 'hover' ? -0.2 : spec.motion === 'mech' ? -0.09 : -0.14
       const chargeLean = spec.motion === 'hover' ? 0.24 : spec.motion === 'frog' ? 0.08 : 0.18
       const brakeLean = spec.motion === 'hover' ? 0.34 : spec.motion === 'frog' ? 0.1 : spec.motion === 'mech' ? 0.18 : 0.24
@@ -410,7 +411,7 @@ function AssetCharacter({ id, x, charging, autoBraking, chargePower, phase, velo
       group.current.scale.setScalar(baseScale)
     }
 
-    const skateShift = moving ? stride * 0.07 : 0
+    const skateShift = moving ? motionStride * 0.07 : 0
     pose.current.position.y = THREE.MathUtils.damp(pose.current.position.y, bounce - chargeCrouch * 0.2 - (autoBraking ? 0.12 : 0) + launchStage * 0.08, 18, delta)
     pose.current.position.x = THREE.MathUtils.damp(pose.current.position.x, skateShift, 16, delta)
     const chargeTremor = charging && !outcomePose && chargePower >= 0.82 ? Math.sin(chargeAge * 30) * 0.035 : 0
@@ -419,8 +420,8 @@ function AssetCharacter({ id, x, charging, autoBraking, chargePower, phase, velo
     const brakeTremor = autoBraking && !outcomePose && brakeAge > 0.18 ? Math.sin(brakeAge * 30) * 0.055 : 0
     const brakeArmSwing = autoBraking && !outcomePose ? Math.sin(Math.max(0, brakeAge - 0.08) * 12.1) * 0.24 * brakePunch : 0
     const brakeLegBalance = autoBraking && !outcomePose ? Math.sin(Math.max(0, brakeAge - 0.08) * 15.4) * 0.08 * brakePunch : 0
-    pose.current.rotation.z = THREE.MathUtils.damp(pose.current.rotation.z, falling ? fallWave * 0.12 : autoBraking ? brakeTremor : charging ? -0.08 * chargeCrouch + chargeTremor : moving ? stride * 0.055 : Math.sin(time * 2.2) * 0.018, 16, delta)
-    pose.current.rotation.y = THREE.MathUtils.damp(pose.current.rotation.y, moving ? stride * 0.1 : idle ? Math.sin(time * 1.8) * 0.025 : 0, 14, delta)
+    pose.current.rotation.z = THREE.MathUtils.damp(pose.current.rotation.z, falling ? fallWave * 0.12 : autoBraking ? brakeTremor : charging ? -0.08 * chargeCrouch + chargeTremor : moving ? motionStride * 0.055 : Math.sin(time * 2.2) * 0.018, 16, delta)
+    pose.current.rotation.y = THREE.MathUtils.damp(pose.current.rotation.y, moving ? motionStride * 0.1 : idle ? Math.sin(time * 1.8) * 0.025 : 0, 14, delta)
     const squashWeight = spec.motion === 'mech' ? 0.35 : spec.motion === 'hover' ? 0.55 : spec.motion === 'frog' ? 1.25 : 1
     const verticalScale = 1 + breath * (idle ? 0.025 * squashWeight : 0) - chargeCrouch * 0.13 * squashWeight - (autoBraking ? 0.07 * squashWeight : 0) + launchStage * 0.04
     pose.current.scale.set(1 + chargeCrouch * 0.055 - launchStage * 0.025, verticalScale, 1)
@@ -428,14 +429,14 @@ function AssetCharacter({ id, x, charging, autoBraking, chargePower, phase, velo
     if (rig.length >= 4) {
       if (spec.motion === 'human' || spec.motion === 'mech') {
         const limbWeight = spec.motion === 'mech' ? 0.68 : 1
-        const pushLeft = moving ? Math.max(0, stride) : 0
-        const pushRight = moving ? Math.max(0, -stride) : 0
+        const pushLeft = moving ? Math.max(0, motionStride) : 0
+        const pushRight = moving ? Math.max(0, -motionStride) : 0
         const legAction = charging ? chargeCrouch * 0.52 : 0
-        const armCounter = moving ? stride * (0.72 + launchStage * 0.48) : idle ? Math.sin(time * 1.8) * 0.1 : 0
+        const armCounter = moving ? motionStride * (0.72 + launchStage * 0.48) : idle ? Math.sin(time * 1.8) * 0.1 : 0
         const armLeftOut = moving ? Math.max(0, armCounter) : 0
         const armRightOut = moving ? Math.max(0, -armCounter) : 0
-        rig[0].rotation.x = THREE.MathUtils.damp(rig[0].rotation.x, falling ? 0.72 + fallWave * 0.5 : autoBraking ? (0.38 + brakeLegBalance) * limbWeight : charging ? (legAction + chargeLegBalance) * limbWeight : (stride * (1.02 + launchStage * 0.3)) * limbWeight, 22, delta)
-        rig[1].rotation.x = THREE.MathUtils.damp(rig[1].rotation.x, falling ? -0.72 - fallWave * 0.42 : autoBraking ? (-0.38 - brakeLegBalance) * limbWeight : charging ? (-legAction - chargeLegBalance) * limbWeight : (-stride * (1.02 + launchStage * 0.3)) * limbWeight, 22, delta)
+        rig[0].rotation.x = THREE.MathUtils.damp(rig[0].rotation.x, falling ? 0.72 + fallWave * 0.5 : autoBraking ? (0.38 + brakeLegBalance) * limbWeight : charging ? (legAction + chargeLegBalance) * limbWeight : (motionStride * (1.02 + launchStage * 0.3)) * limbWeight, 22, delta)
+        rig[1].rotation.x = THREE.MathUtils.damp(rig[1].rotation.x, falling ? -0.72 - fallWave * 0.42 : autoBraking ? (-0.38 - brakeLegBalance) * limbWeight : charging ? (-legAction - chargeLegBalance) * limbWeight : (-motionStride * (1.02 + launchStage * 0.3)) * limbWeight, 22, delta)
         rig[2].rotation.x = THREE.MathUtils.damp(rig[2].rotation.x, falling ? -0.82 - fallWave * 0.62 : autoBraking ? (1.12 + brakeArmSwing) * limbWeight : charging ? (1.16 + chargeArmSwing) * limbWeight : -armCounter * limbWeight, 22, delta)
         rig[3].rotation.x = THREE.MathUtils.damp(rig[3].rotation.x, falling ? 0.82 - fallWave * 0.55 : autoBraking ? (1.12 - brakeArmSwing) * limbWeight : charging ? (1.16 - chargeArmSwing) * limbWeight : armCounter * limbWeight, 22, delta)
         rig[0].rotation.z = THREE.MathUtils.damp(rig[0].rotation.z, falling ? -0.58 - fallWave * 0.28 : autoBraking ? -0.72 - brakeLegBalance : charging ? -0.34 - chargeLegBalance : -0.18 - pushLeft * 0.54, 22, delta)
@@ -443,14 +444,14 @@ function AssetCharacter({ id, x, charging, autoBraking, chargePower, phase, velo
         rig[2].rotation.z = THREE.MathUtils.damp(rig[2].rotation.z, falling ? -1.16 - fallWave * 0.34 : autoBraking ? -0.62 - Math.abs(brakeArmSwing) * 0.18 : charging ? -0.62 - Math.abs(chargeArmSwing) * 0.18 : -0.48 - armLeftOut * 0.78, 22, delta)
         rig[3].rotation.z = THREE.MathUtils.damp(rig[3].rotation.z, falling ? 1.16 - fallWave * 0.34 : autoBraking ? 0.62 + Math.abs(brakeArmSwing) * 0.18 : charging ? 0.62 + Math.abs(chargeArmSwing) * 0.18 : 0.48 + armRightOut * 0.78, 22, delta)
       } else if (spec.motion === 'bird') {
-        const shortStep = moving ? stride * (0.82 + launchStage * 0.28) : charging ? chargeCrouch * 0.28 : 0
-        const wingBalance = moving ? stride * 0.34 : idle ? Math.sin(time * 2.1) * 0.08 : 0
+        const shortStep = moving ? motionStride * (0.82 + launchStage * 0.28) : charging ? chargeCrouch * 0.28 : 0
+        const wingBalance = moving ? motionStride * 0.34 : idle ? Math.sin(time * 2.1) * 0.08 : 0
         rig[0].rotation.z = THREE.MathUtils.damp(rig[0].rotation.z, autoBraking ? -0.68 - brakeTremor : charging ? -0.68 - chargeTremor : shortStep, 24, delta)
         rig[1].rotation.z = THREE.MathUtils.damp(rig[1].rotation.z, autoBraking ? 0.68 + brakeTremor : charging ? 0.68 + chargeTremor : -shortStep, 24, delta)
         rig[2].rotation.x = THREE.MathUtils.damp(rig[2].rotation.x, autoBraking ? -0.92 - brakeArmSwing : charging ? -0.92 - chargeArmSwing : -0.25 - wingBalance, 22, delta)
         rig[3].rotation.x = THREE.MathUtils.damp(rig[3].rotation.x, autoBraking ? 0.92 - brakeArmSwing : charging ? 0.92 - chargeArmSwing : 0.25 + wingBalance, 22, delta)
       } else {
-        const frogKick = spec.motion === 'frog' ? Math.max(0, stride) * 0.95 : stride * 0.72
+        const frogKick = spec.motion === 'frog' ? Math.max(0, motionStride) * 0.95 : motionStride * 0.72
         const diagonal = moving ? frogKick * (1 + launchStage * 0.3) : charging ? chargeCrouch * 0.38 : 0
         const chargePawWave = charging ? Math.sin(chargeAge * 12.1) * 0.16 : 0
         ;[0, 3].forEach(index => { rig[index].rotation.z = THREE.MathUtils.damp(rig[index].rotation.z, falling ? 0.74 + fallWave * 0.45 : autoBraking ? 0.68 + brakeArmSwing * 0.6 : charging ? 0.68 + chargePawWave : diagonal, 22, delta) })

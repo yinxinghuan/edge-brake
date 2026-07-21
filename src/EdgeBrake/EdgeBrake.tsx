@@ -67,6 +67,8 @@ export default function EdgeBrake() {
       data-character={view.characterId}
       data-weight={currentCharacter.weight}
       data-speed={currentCharacter.speed}
+      data-new-unlock={view.newUnlock ?? ''}
+      data-character-stats={showChargeUi && view.phase !== 'cover' && !view.newUnlock ? 'visible' : view.newUnlock ? 'delayed' : 'hidden'}
       data-charge={view.chargePower.toFixed(3)}
       data-auto-braking={view.isAutoBraking ? '1' : '0'}
       data-weather={weather}
@@ -125,10 +127,9 @@ export default function EdgeBrake() {
         </div>
       )}
 
-      {showChargeUi && view.phase !== 'cover' && (
+      {showChargeUi && view.phase !== 'cover' && !view.newUnlock && (
         <div className={`eb-character-stats${view.phase === 'charging' ? ' eb-character-stats--charging' : ''}`}>
-          <strong>{characterName(view.characterId, locale)}</strong>
-          <span><i>{t('weight')}</i><b>{currentCharacter.weight}kg</b></span>
+          <span><i>{t('weight')}</i><b>{currentCharacter.weight}<small>kg</small></b></span>
           <span><i>{t('speed')}</i><b>{currentCharacter.speed.toFixed(1)}</b></span>
         </div>
       )}
