@@ -63,6 +63,11 @@ const zh = {
   category_mechs: '机甲',
   category_mythic: '神话',
   category_animals: '动物',
+  leaderboard: '排行榜',
+  currentChampion: '当前冠军',
+  noChampion: '等待首位冠军',
+  pointsUnit: '分',
+  openLeaderboard: '打开排行榜',
 }
 
 const en: typeof zh = {
@@ -128,6 +133,11 @@ const en: typeof zh = {
   category_mechs: 'MECH',
   category_mythic: 'MYTHIC',
   category_animals: 'ANIMALS',
+  leaderboard: 'LEADERBOARD',
+  currentChampion: 'CURRENT CHAMPION',
+  noChampion: 'BE THE FIRST CHAMPION',
+  pointsUnit: 'PTS',
+  openLeaderboard: 'Open leaderboard',
 }
 
 const strings = { zh, en }

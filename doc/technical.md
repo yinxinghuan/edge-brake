@@ -7,6 +7,7 @@
 - Less 管理固定 390×700 逻辑画布、缩放适配、状态样式和动效降级。
 - Vite 5 构建，`base: './'`，`npm run build` 输出可部署到任意子路径的 `dist/`。
 - Web Audio API 合成蓄力、满力、发车、停车、金币、解锁和失败音效；localStorage 保存成绩、收藏、金币、当前角色、静音与语言覆盖。
+- Aigram 共享 runtime 与排行榜组件负责平台身份、累计分上报、榜单读取、跨用户主页跳转和 `score_beat` 单人通知；脱离 Aigram 时不发起榜单请求。
 
 ## 2. 目录结构
 
@@ -20,6 +21,8 @@
 - `src/EdgeBrake/i18n/index.ts`：中英文文案和语言检测。
 - `src/EdgeBrake/utils/sounds.ts`：Web Audio 合成音效。
 - `src/EdgeBrake/EdgeBrake.less`：HUD、蓄力控制、两行角色属性、解锁横幅时序、结果层、收藏卡和响应式视觉系统。
+- `src/shared/leaderboard/`：排行榜数据 hook、冠军入口后的完整榜单、加载/空/错误/站外状态与用户行交互。
+- `src/shared/runtime/`：Aigram Bridge、当前用户身份、跨用户主页跳转和游戏事件通知调用。
 - `src/game-id.ts`：永久游戏 UUID 注入文件，迭代时不得更换。
 - `public/poster.png`、`meta.json`：正式封面与游戏元数据。
 - `_qa/ui/`：390×700、320×568 的运行截图与交互复验记录。
@@ -37,7 +40,7 @@
 - 镜头：封面、`awaiting`、`charging` 使用 zoom 64–70 英雄近景。发车后相机跟随角色保持 280 ms 起跑特写，再用 920 ms 拉到 zoom 6.8 的整条跑道全景，并停留到发车后 2100 ms；随后按接近崖口的危险进度推近。成功镜头绕至崖外正面 zoom 78；动力不足升高到剩余跑道俯视 zoom 7.4；坠崖沿崖壁垂直追随，zoom 84→62。
 - 场景：`IcePlatform` 用不同长度和厚度的 BoxGeometry 形成方块浮岛跑道；天气按 6 关循环；远景从熊、牛、猪、狐狸、幽灵、僵尸、狼人、木乃伊、骷髅、战斗机甲和牛头怪中随机抽取巨大局部剪影。巨物按发车时间控制透明度，在 1200–2100 ms 的最远全景和停留段保持可见，2300–3400 ms 才淡出。角色使用实时阴影，跑道不生成额外矩形假阴影。
 - 适配与可访问性：390×700 游戏场按视口宽高最小比例整体缩放；R3F 画布保持逻辑尺寸，正交相机按真实渲染比例补偿 zoom。功能按钮不小于 44×44 CSS px，焦点有可见外框，`prefers-reduced-motion` 会取消非必要循环和震动。
-- 平台身份：`src/game-id.ts` 把永久 UUID `5cc524e5-8b5b-48a2-bc0d-e8ecd80fa30a` 写入 `window.__GAME_UUID__`。当前版本尚未接入排行榜或云存档接口。
+- 平台身份与排行榜：`src/game-id.ts` 把永久 UUID `5cc524e5-8b5b-48a2-bc0d-e8ecd80fa30a` 写入 `window.__GAME_UUID__`，榜单读取与成绩上报都使用该 UUID。首屏和坠落结算显示当前冠军入口；完整榜单显示名次、头像、姓名、分数和本人标记，其他用户行可打开其 AlterU 主页，本人行禁用。排行榜分数是从第 1 关开始、直到坠落为止的本轮累计分，只在 `gameover` 提交；首轮蓄力时快照提交前个人最佳，刷新榜单后只通知一个被本次新纪录刚刚超过且分数最高的用户。通知、榜单或头像失败均不阻断结算；站外模式隐藏入口且不请求排行接口。
 
 ## 4. 扩展点
 
@@ -47,5 +50,5 @@
 - 修改角色动作、浮岛、天气、灯光、镜头、粒子或远景巨物：修改 `components/EdgeBrakeScene.tsx`，并同步 `doc/visual.md`。
 - 修改 HUD、蓄力控件、两行角色属性、解锁横幅时序、结果页、颜色、排版与动效：修改 `EdgeBrake.tsx`、`EdgeBrake.less`、`hooks/useEdgeBrake.ts` 和 `doc/visual.md`。
 - 修改中英文文案或声音：分别修改 `i18n/index.ts`、`utils/sounds.ts`，并同步需求文档的事件映射。
-- 增加排行榜或云存档：基于现有永久 UUID 接入共享 runtime，保留本地数据作为离线回退而非平台数据源。
+- 修改排行榜入口、榜单视觉或行交互：修改 `EdgeBrake.tsx`、`EdgeBrake.less` 与 `src/shared/leaderboard/`；修改累计分提交、冠军刷新或 `score_beat` 目标选择：修改 `EdgeBrake.tsx`，永久 UUID 不得更换。云存档仍可基于现有 shared runtime 扩展，本地数据保留为离线回退而非平台排行榜数据源。
 - 发布：按 game-publish 流程检查 `meta.json`、海报来源、UUID、相对资源路径、构建产物与线上 bundle；本次玩法改造未自动发布。

@@ -1,4 +1,7 @@
-import { useMemo, useState, type CSSProperties } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
+import { Leaderboard, useGameScore } from '@shared/leaderboard'
+import type { LeaderboardEntry } from '@shared/leaderboard'
+import { telegramId, useGameEvent } from '@shared/runtime'
 import { CHARACTERS, CHARACTER_BY_ID, characterName, nextRosterCharacter, weatherForLevel } from './characters'
 import EdgeBrakeScene from './components/EdgeBrakeScene'
 import Watermark from './components/Watermark'
@@ -37,10 +40,53 @@ function TouchAppIcon() {
   )
 }
 
+function CrownIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="m4 8 4 4 4-7 4 7 4-4-2 10H6L4 8Z" />
+      <path d="M7 21h10" />
+    </svg>
+  )
+}
+
+function ChampionEntry({ champion, label, emptyLabel, scoreUnit, ariaLabel, onOpen }: {
+  champion: LeaderboardEntry | null
+  label: string
+  emptyLabel: string
+  scoreUnit: string
+  ariaLabel: string
+  onOpen: () => void
+}) {
+  const name = champion?.name || emptyLabel
+  return (
+    <button
+      className={`eb-champion-entry${champion ? ' eb-champion-entry--live' : ''}`}
+      type="button"
+      aria-label={ariaLabel}
+      onPointerDown={event => event.stopPropagation()}
+      onClick={event => { event.stopPropagation(); onOpen() }}
+    >
+      <span className="eb-champion-entry__avatar" aria-hidden="true">
+        {champion?.avatar_url
+          ? <img src={champion.avatar_url} alt="" draggable={false} />
+          : champion ? <i>{name.charAt(0).toUpperCase()}</i> : <CrownIcon />}
+      </span>
+      <span className="eb-champion-entry__copy"><small>{label}</small><strong>{name}</strong></span>
+      {champion && <span className="eb-champion-entry__score"><strong>{champion.score.toLocaleString()}</strong><small>{scoreUnit}</small></span>}
+    </button>
+  )
+}
+
 export default function EdgeBrake() {
   const { view, scale, beginCharge, releaseCharge, prepareRetry, advanceResult, toggleMuted, goHome, selectCharacter, buyCharacter } = useEdgeBrake()
   const [locale] = useState(detectLocale)
   const [rosterOpen, setRosterOpen] = useState(false)
+  const [leaderboardOpen, setLeaderboardOpen] = useState(false)
+  const [champion, setChampion] = useState<LeaderboardEntry | null>(null)
+  const leaderboardRowsRef = useRef<LeaderboardEntry[]>([])
+  const preRunBestRef = useRef(0)
+  const snapshotEventRef = useRef<number | null>(null)
+  const submittedEventRef = useRef<number | null>(null)
   const [deniedCharacter, setDeniedCharacter] = useState<CharacterId | null>(null)
   const t = useMemo(() => createTranslator(locale), [locale])
   const currentCharacter = CHARACTER_BY_ID[view.characterId]
@@ -55,6 +101,71 @@ export default function EdgeBrake() {
   const nextResultCharacter = view.result?.passed
     ? CHARACTERS.find(character => !view.unlockedCharacters.includes(character.id)) ?? nextRosterCharacter(view.characterId)
     : CHARACTER_BY_ID[view.characterId]
+  const { isInAigram, canRank, submitScore, fetchLeaderboard } = useGameScore()
+  const events = useGameEvent()
+
+  const refreshLeaderboard = useCallback(async () => {
+    if (!canRank) return []
+    const rows = await fetchLeaderboard()
+    leaderboardRowsRef.current = rows
+    setChampion(rows[0] ?? null)
+    return rows
+  }, [canRank, fetchLeaderboard])
+
+  useEffect(() => {
+    if (!canRank || (view.phase !== 'cover' && view.phase !== 'gameover')) return
+    refreshLeaderboard().catch(() => {})
+  }, [canRank, refreshLeaderboard, view.phase])
+
+  useEffect(() => {
+    if (!canRank || view.phase !== 'charging' || view.level !== 1 || view.score !== 0 || snapshotEventRef.current === view.eventKey) return
+    snapshotEventRef.current = view.eventKey
+    const meId = telegramId ? String(telegramId) : ''
+    const snapshot = (rows: LeaderboardEntry[]) => {
+      const me = meId ? rows.find(row => String(row.user_id) === meId) : null
+      preRunBestRef.current = me ? Number(me.score) || 0 : 0
+    }
+    snapshot(leaderboardRowsRef.current)
+    if (leaderboardRowsRef.current.length === 0) refreshLeaderboard().then(snapshot).catch(() => {})
+  }, [canRank, refreshLeaderboard, view.eventKey, view.level, view.phase, view.score])
+
+  const sendBeatNotify = useCallback(async (myScore: number) => {
+    if (!canRank || !telegramId || !events.canEmit || myScore <= preRunBestRef.current) return
+    try {
+      const fresh = await refreshLeaderboard()
+      const meId = String(telegramId)
+      const beaten = fresh
+        .filter(row => String(row.user_id) !== meId)
+        .map(row => ({ id: String(row.user_id), score: Number(row.score) || 0 }))
+        .filter(row => row.score < myScore && row.score > preRunBestRef.current)
+        .sort((a, b) => b.score - a.score)[0]
+      if (!beaten) return
+      events.trigger('score_beat', {
+        actions: [{
+          type: 'notify',
+          target_user_id: beaten.id,
+          image: {
+            ref_url: 'https://yinxinghuan.github.io/games/posters/edge-brake.png',
+            prompt: 'a low-poly polar explorer braking at the very edge of a blocky floating ice cliff',
+          },
+          message: {
+            template: locale === 'zh'
+              ? `{sender_name} 刚刚以 ${Math.round(myScore)} 分超过了你在《急刹车》的纪录。`
+              : `{sender_name} just beat your record with ${Math.round(myScore)} points on Edge Brake.`,
+            variables: ['sender_name'],
+          },
+        }],
+      })
+    } catch { /* leaderboard and notification failures stay silent */ }
+  }, [canRank, events, locale, refreshLeaderboard])
+
+  useEffect(() => {
+    if (!canRank || view.phase !== 'gameover' || view.score <= 0 || submittedEventRef.current === view.eventKey) return
+    submittedEventRef.current = view.eventKey
+    submitScore(view.score)
+      .then(() => sendBeatNotify(view.score))
+      .catch(() => {})
+  }, [canRank, sendBeatNotify, submitScore, view.eventKey, view.phase, view.score])
 
   return (
     <main
@@ -74,9 +185,12 @@ export default function EdgeBrake() {
       data-weather={weather}
       data-track-progress={trackProgress.toFixed(3)}
       data-speed-zone={trackProgress < 0.3 ? 'launch' : trackProgress < 0.68 ? 'boost' : 'cliff'}
+      data-can-rank={canRank ? '1' : '0'}
+      data-leaderboard={leaderboardOpen ? 'open' : 'closed'}
+      data-champion={champion?.user_id ?? ''}
       style={{ width: FIELD_W, height: FIELD_H, transform: `translate(-50%, -50%) scale(${scale})`, transformOrigin: 'center' }}
       onPointerDown={event => {
-        if (rosterOpen || (event.target as HTMLElement).closest('button')) return
+        if (rosterOpen || leaderboardOpen || (event.target as HTMLElement).closest('button')) return
         if (view.phase === 'cover' || view.phase === 'awaiting') {
           event.currentTarget.setPointerCapture(event.pointerId)
           beginCharge()
@@ -197,12 +311,24 @@ export default function EdgeBrake() {
           <h1>{t('title')}</h1>
           <p>{t('subtitle')}</p>
           <div className="eb-cover__scene-space" aria-hidden="true" />
-          <button className="eb-crew-entry" type="button" onPointerDown={event => event.stopPropagation()} onClick={() => setRosterOpen(true)}>
-            <span><CrewIcon /></span>
-            <strong>{t('expedition')}</strong>
-            <em>{t('collection', { n: view.unlockedCharacters.length })}</em>
-            <i><CoinIcon />{view.coins}</i>
-          </button>
+          <div className={`eb-cover__entries${canRank ? '' : ' eb-cover__entries--single'}`}>
+            {canRank && (
+              <ChampionEntry
+                champion={champion}
+                label={champion ? t('currentChampion') : t('leaderboard')}
+                emptyLabel={t('noChampion')}
+                scoreUnit={t('pointsUnit')}
+                ariaLabel={t('openLeaderboard')}
+                onOpen={() => setLeaderboardOpen(true)}
+              />
+            )}
+            <button className="eb-crew-entry" type="button" aria-label={t('expedition')} onPointerDown={event => event.stopPropagation()} onClick={() => setRosterOpen(true)}>
+              <span><CrewIcon /></span>
+              <strong>{t('expedition')}</strong>
+              <em>{t('collection', { n: view.unlockedCharacters.length })}</em>
+              <i><CoinIcon />{view.coins}</i>
+            </button>
+          </div>
         </section>
       )}
 
@@ -228,6 +354,16 @@ export default function EdgeBrake() {
               {t('again')}
             </button>
             <button className="eb-gameover__crew" type="button" onPointerDown={event => event.stopPropagation()} onClick={() => setRosterOpen(true)}><CrewIcon />{t('expedition')}</button>
+            {canRank && (
+              <ChampionEntry
+                champion={champion}
+                label={champion ? t('currentChampion') : t('leaderboard')}
+                emptyLabel={t('noChampion')}
+                scoreUnit={t('pointsUnit')}
+                ariaLabel={t('openLeaderboard')}
+                onOpen={() => setLeaderboardOpen(true)}
+              />
+            )}
             <button className="eb-gameover__home" type="button" onPointerDown={event => event.stopPropagation()} onClick={goHome}>{t('home')}</button>
           </div>
         </section>
@@ -273,6 +409,15 @@ export default function EdgeBrake() {
             </div>
           </div>
         </section>
+      )}
+
+      {leaderboardOpen && (
+        <Leaderboard
+          gameName={locale === 'zh' ? '急刹车' : 'EDGE BRAKE'}
+          isInAigram={isInAigram}
+          onClose={() => setLeaderboardOpen(false)}
+          fetch={fetchLeaderboard}
+        />
       )}
     </main>
   )
