@@ -6,8 +6,8 @@ export const MIN_CHARGE_MS = 80
 
 export const SURFACE_FACTOR: Record<WeatherKind, number> = {
   clear: 1,
-  snow: 1.07,
-  fog: 0.96,
+  snow: 1.05,
+  fog: 0.94,
   blizzard: 1.03,
 }
 

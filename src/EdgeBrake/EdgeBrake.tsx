@@ -7,8 +7,7 @@ import EdgeBrakeScene from './components/EdgeBrakeScene'
 import Watermark from './components/Watermark'
 import { useEdgeBrake } from './hooks/useEdgeBrake'
 import { createTranslator, detectLocale, type CopyKey } from './i18n'
-import { SURFACE_FACTOR } from './physics'
-import { FIELD_H, FIELD_W, type CharacterId, type Rating } from './types'
+import { FIELD_H, FIELD_W, type CharacterId, type Rating, type WeatherKind } from './types'
 import './EdgeBrake.less'
 
 function SoundIcon({ muted }: { muted: boolean }) {
@@ -46,6 +45,22 @@ function CrownIcon() {
       <path d="m4 8 4 4 4-7 4 7 4-4-2 10H6L4 8Z" />
       <path d="M7 21h10" />
     </svg>
+  )
+}
+
+function WeatherIcon({ weather }: { weather: WeatherKind }) {
+  if (weather === 'clear') return <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.4" /><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1m9.2 9.2 2.1 2.1m0-13.4-2.1 2.1m-9.2 9.2-2.1 2.1" /></svg>
+  if (weather === 'fog') return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8.5h16M2.5 12h14M5.5 15.5h15M3.5 19h11" /></svg>
+  return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.8 10.2a4.1 4.1 0 0 1 7.9-1.1A3.4 3.4 0 1 1 17.2 15H7.3a3.1 3.1 0 0 1-.5-4.8Z" /><path d={weather === 'blizzard' ? 'm5 18 3-2m2 5 3-2m2 3 3-2' : 'm8 18 .01 0M12 20 .01 0M16 18 .01 0'} /></svg>
+}
+
+function WeatherBrief({ weather, t, compact = false }: { weather: WeatherKind; t: ReturnType<typeof createTranslator>; compact?: boolean }) {
+  return (
+    <div className={`eb-weather-brief eb-weather-brief--${weather}${compact ? ' eb-weather-brief--compact' : ''}`} aria-live="polite">
+      <span className="eb-weather-brief__icon"><WeatherIcon weather={weather} /></span>
+      <span className="eb-weather-brief__copy"><small>{t('weatherForecast')}</small><strong>{t(`weather_${weather}` as CopyKey)}</strong><em>{t(`weatherEffect_${weather}` as CopyKey)}</em></span>
+      {!compact && <b>{t(`weatherChange_${weather}` as CopyKey)}</b>}
+    </div>
   )
 }
 
@@ -230,6 +245,8 @@ export default function EdgeBrake() {
         <EdgeBrakeScene x={view.x} cliffX={view.cliffX} charging={view.isCharging} autoBraking={view.isAutoBraking} chargePower={view.chargePower} phase={view.phase} rating={view.result?.rating ?? null} characterId={view.characterId} preloadCharacterId={nextResultCharacter.id} velocity={view.velocity} weather={weather} />
       </section>
 
+      {view.phase === 'playing' && weather !== 'clear' && <div className={`eb-weather-screen eb-weather-screen--${weather}`} aria-hidden="true"><i /><i /><i /></div>}
+
       <Watermark />
 
       {view.phase === 'playing' && (
@@ -237,8 +254,13 @@ export default function EdgeBrake() {
           <span>{t('cliffDistance')}</span>
           <strong>{remaining}<small>px</small></strong>
           <i><b style={{ transform: `scaleX(${trackProgress})` }} /></i>
-          <em>{t(`weather_${weather}` as CopyKey)} ×{SURFACE_FACTOR[weather].toFixed(2)}</em>
+          <span className="eb-danger__weather"><WeatherIcon weather={weather} />{t(`weather_${weather}` as CopyKey)}</span>
+          <em>{t(`weatherEffect_${weather}` as CopyKey)} · {t(`weatherChange_${weather}` as CopyKey)}</em>
         </div>
+      )}
+
+      {showChargeUi && view.phase !== 'cover' && !view.newUnlock && (
+        <WeatherBrief weather={weather} t={t} />
       )}
 
       {showChargeUi && view.phase !== 'cover' && !view.newUnlock && (
@@ -310,6 +332,7 @@ export default function EdgeBrake() {
           <div className="eb-cover__eyebrow">SOUTH POLE BRAKE CLUB</div>
           <h1>{t('title')}</h1>
           <p>{t('subtitle')}</p>
+          <WeatherBrief weather={weather} t={t} compact />
           <div className="eb-cover__scene-space" aria-hidden="true" />
           <div className={`eb-cover__entries${canRank ? '' : ' eb-cover__entries--single'}`}>
             {canRank && (

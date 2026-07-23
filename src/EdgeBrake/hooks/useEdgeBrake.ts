@@ -132,6 +132,12 @@ export function useEdgeBrake() {
       result: null,
       eventKey: current.eventKey + 1,
     })
+    if (level > 1) {
+      const weather = weatherForLevel(level)
+      if (weather === 'snow') playSound('weatherSnow', current.muted)
+      if (weather === 'fog') playSound('weatherFog', current.muted)
+      if (weather === 'blizzard') playSound('weatherBlizzard', current.muted)
+    }
     if (newUnlock) {
       playSound('unlock', current.muted)
       unlockTimerRef.current = window.setTimeout(() => commit(now => ({ ...now, newUnlock: null })), 1700)

@@ -660,7 +660,8 @@ function Atmosphere({ weather }: { weather: WeatherKind }) {
 function WeatherFx({ weather, x }: { weather: WeatherKind; x: number }) {
   const points = useRef<THREE.Points>(null)
   const weatherMaterial = useRef<THREE.PointsMaterial>(null)
-  const count = weather === 'blizzard' ? 180 : 120
+  const reduceMotion = useMemo(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches, [])
+  const count = weather === 'blizzard' ? 400 : 240
   const seeds = useMemo(() => Array.from({ length: count }, (_, index) => ({
     x: ((index * 47) % 180) / 10 - 9,
     y: ((index * 71) % 110) / 10,
@@ -671,15 +672,16 @@ function WeatherFx({ weather, x }: { weather: WeatherKind; x: number }) {
 
   useFrame((state, delta) => {
     if (!points.current || weather === 'clear' || weather === 'fog') return
-    if (weatherMaterial.current) weatherMaterial.current.opacity = THREE.MathUtils.damp(weatherMaterial.current.opacity, weather === 'blizzard' ? 0.82 : 0.68, 3.6, delta)
+    if (weatherMaterial.current) weatherMaterial.current.opacity = THREE.MathUtils.damp(weatherMaterial.current.opacity, weather === 'blizzard' ? 0.9 : 0.78, 3.6, delta)
+    if (reduceMotion) return
     const time = state.clock.elapsedTime
     for (let index = 0; index < seeds.length; index += 1) {
       const seed = seeds[index]
-      seed.y -= seed.speed * delta * (weather === 'blizzard' ? 2.1 : 1)
-      seed.x -= delta * (weather === 'blizzard' ? 3.8 : 0.42)
+      seed.y -= seed.speed * delta * (weather === 'blizzard' ? 2.55 : 1.15)
+      seed.x -= delta * (weather === 'blizzard' ? 4.6 : 0.55)
       if (seed.y < 0) seed.y += 11
       if (seed.x < -9) seed.x += 18
-      positions[index * 3] = seed.x + Math.sin(time * 1.1 + index) * (weather === 'blizzard' ? 0.12 : 0.46)
+      positions[index * 3] = seed.x + Math.sin(time * 1.1 + index) * (weather === 'blizzard' ? 0.15 : 0.52)
       positions[index * 3 + 1] = seed.y
       positions[index * 3 + 2] = seed.z + Math.cos(time * 0.8 + index) * 0.25
     }
@@ -693,8 +695,30 @@ function WeatherFx({ weather, x }: { weather: WeatherKind; x: number }) {
       <bufferGeometry>
         <bufferAttribute attach="attributes-position" args={[positions, 3]} />
       </bufferGeometry>
-      <pointsMaterial ref={weatherMaterial} color="#f4fbf8" size={weather === 'blizzard' ? 0.09 : 0.075} transparent opacity={0} sizeAttenuation />
+      <pointsMaterial ref={weatherMaterial} color="#f4fbf8" size={weather === 'blizzard' ? 0.105 : 0.09} transparent opacity={0} sizeAttenuation />
     </points>
+  )
+}
+
+function FogBanks({ weather, x }: { weather: WeatherKind; x: number }) {
+  const group = useRef<THREE.Group>(null)
+  const reduceMotion = useMemo(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches, [])
+  const visible = weather === 'fog' || weather === 'blizzard'
+  useFrame((state) => {
+    if (!group.current || reduceMotion) return
+    group.current.position.x = screenToWorld(x + 160) + Math.sin(state.clock.elapsedTime * .18) * .35
+  })
+  if (!visible) return null
+  const opacity = weather === 'fog' ? .16 : .1
+  return (
+    <group ref={group} position={[screenToWorld(x + 160), 2.1, -4.2]}>
+      {[-5.2, -3.2, -1.1, 1.5, 3.9, 6.1].map((offset, index) => (
+        <mesh key={offset} position={[offset, (index % 2) * .48, -index * .18]} scale={[2.8 + (index % 3) * .55, .7 + (index % 2) * .25, .55]}>
+          <icosahedronGeometry args={[1, 1]} />
+          <meshBasicMaterial color={weather === 'fog' ? '#c6d6d8' : '#b7d8e2'} transparent opacity={opacity} depthWrite={false} />
+        </mesh>
+      ))}
+    </group>
   )
 }
 
@@ -1197,6 +1221,7 @@ function World({ x, cliffX, charging, autoBraking, chargePower, phase, rating, c
       <EdgeCrystals cliffX={cliffX} visible={phase === 'result' && rating === 'edge'} />
       <OceanDetails cliffX={cliffX} />
       <WeatherFx key={weather} weather={weather} x={x} />
+      <FogBanks weather={weather} x={x} />
 
       {[-13, -9, 22, 27].map((position, i) => (
         <group key={position} position={[position, -0.7, -9 - (i % 2) * 1.8]}>

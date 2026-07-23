@@ -26,7 +26,7 @@ function tone(frequency: number, duration: number, volume: number, type: Oscilla
   }
 }
 
-export function playSound(name: 'charge' | 'powerReady' | 'launch' | 'autoBrake' | 'safe' | 'great' | 'edge' | 'earlyFail' | 'fall' | 'button' | 'coin' | 'unlock' | 'deny', muted: boolean, intensity = 0.5) {
+export function playSound(name: 'charge' | 'powerReady' | 'launch' | 'autoBrake' | 'safe' | 'great' | 'edge' | 'earlyFail' | 'fall' | 'button' | 'coin' | 'unlock' | 'deny' | 'weatherSnow' | 'weatherFog' | 'weatherBlizzard', muted: boolean, intensity = 0.5) {
   if (muted) return
   if (name === 'charge') tone(180, 0.14, 0.06, 'triangle', 0, 260)
   if (name === 'powerReady') tone(520, 0.055, 0.045)
@@ -65,5 +65,8 @@ export function playSound(name: 'charge' | 'powerReady' | 'launch' | 'autoBrake'
     tone(620, 0.12, 0.1, 'sine', 0.07)
     tone(840, 0.14, 0.11, 'sine', 0.14)
   }
+  if (name === 'weatherSnow') tone(390, 0.07, 0.04, 'triangle', 0, 450)
+  if (name === 'weatherFog') tone(240, 0.11, 0.04, 'sine', 0, 190)
+  if (name === 'weatherBlizzard') tone(180, 0.13, 0.045, 'triangle', 0, 120)
   if (name === 'deny') tone(90, 0.12, 0.075, 'square', 0, 70)
 }

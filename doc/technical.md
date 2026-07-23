@@ -18,8 +18,8 @@
 - `src/EdgeBrake/characters.ts`：从本地清单生成 52 名角色，提供名称、动作组、体重、速度、缩放、朝向、价格与素材 URL。
 - `src/EdgeBrake/components/EdgeBrakeScene.tsx`：3D 世界、角色骨骼动作、方块浮岛跑道、天气、巨物彩蛋、镜头、灯光、阴影和结果特效。
 - `src/assets/characters/`：共享素材库消费者的标准目录，包含 52 个 GLB、52 张 PNG 缩略图和 `ASSETS.json`，构建不依赖仓库外路径，并可由实时 inventory 完整性脚本直接审计。
-- `src/EdgeBrake/i18n/index.ts`：中英文文案和语言检测。
-- `src/EdgeBrake/utils/sounds.ts`：Web Audio 合成音效。
+- `src/EdgeBrake/i18n/index.ts`：中英文文案、天气预报、阻力变化和驾驶提示的语言检测与翻译。
+- `src/EdgeBrake/utils/sounds.ts`：Web Audio 合成音效与雪、雾、风雪的轻提示音。
 - `src/EdgeBrake/EdgeBrake.less`：HUD、蓄力控制、两行角色属性、解锁横幅时序、结果层、收藏卡和响应式视觉系统。
 - `src/shared/leaderboard/`：排行榜数据 hook、冠军入口后的完整榜单、加载/空/错误/站外状态与用户行交互。
 - `src/shared/runtime/`：Aigram Bridge、当前用户身份、跨用户主页跳转和游戏事件通知调用。
@@ -32,8 +32,9 @@
 
 - 状态机：首局为 `cover → charging → playing`；重试和下一关停在 `awaiting`，再次按住才进入 `charging`。自然停止后按成绩进入 `success` 或 `earlyFail`，镜头表演结束后进入不限时 `result`；越崖进入 `falling → gameover`。结算不会自动开始下一局。
 - 输入：封面或等待阶段在游戏区域 `pointerdown` 开始蓄力，`pointerup`/`pointercancel` 松手发车；Space/Enter 使用 `keydown`/`keyup` 等价操作。发车后不再接受控制。按钮拦截冒泡，收藏滚动列表使用 `onClick`，避免触摸滚动误选。
-- 蓄力与物理：80 ms 为最短有效输入，1600 ms 充满；力度为 `0.12 + 0.88 × normalized^1.35`。初速度为 `(335 + 365 × power) × speedFactor`，角色速度 2.6–5.0 映射为 0.86–1.14。每帧使用匀减速更新，减速度为 `clamp(126 × surfaceFactor × (75 / weight)^0.22, 92, 166)`；晴、雪、雾、风雪系数分别为 1.00、1.07、0.96、1.03。`velocity / deceleration <= 1.8` 或 `remainingToCliff / velocity <= 1.3` 时把 `isAutoBraking` 置为 true，只切换动作、雪屑和声音，不修改减速度。速度低于 3 px/s 并稳定 140 ms 后结算。
+- 蓄力与物理：80 ms 为最短有效输入，1600 ms 充满；力度为 `0.12 + 0.88 × normalized^1.35`。初速度为 `(335 + 365 × power) × speedFactor`，角色速度 2.6–5.0 映射为 0.86–1.14。每帧使用匀减速更新，减速度为 `clamp(126 × surfaceFactor × (75 / weight)^0.22, 92, 166)`；晴、雪、雾、风雪系数分别为 1.00、1.05、0.94、1.03。`velocity / deceleration <= 1.8` 或 `remainingToCliff / velocity <= 1.3` 时把 `isAutoBraking` 置为 true，只切换动作、雪屑和声音，不修改减速度。速度低于 3 px/s 并稳定 140 ms 后结算。
 - 判定：角色前缘距崖口 0–10、11–35、36–80、81–140、141–220、221–320、321+ px 分别得到 100/90/75/60/45/30/20 分；前六档通过，最后一档原关重试。越过崖口 12 px 直接坠落。随机崖口位于 x=1820–1940，起点 x=40。
+- 天气：`weatherForLevel()` 按晴朗、飘雪、晴朗、薄雾、飘雪、风雪循环。物理减速度分别乘以 1.00、1.05、0.94、1.03；天气预报与滑行 HUD 同时从 i18n 读取名称、效果与变化百分比。3D 场景使用 240 枚雪点、400 枚风雪点、低多边形雾团和颜色/雾距过渡；DOM 边缘雾层与风痕提供近景辨识，`prefers-reduced-motion` 下停用持续运动但保留静态天气信息。
 - 角色属性与收藏：`ASSETS.json` 的 8 类素材强校验为 52 名。体重范围 18–240 kg，速度范围 2.6–5.0；特殊角色使用显式表，其余从 footprint 和动作类型推导。金币、解锁列表、当前角色和最高关卡存入 localStorage；通过后自动解锁并换到下一名角色，也可在商店提前购买。
 - 属性与解锁时序：`newUnlock` 非空时只渲染包含姓名的解锁横幅，1700 ms 定时清空后才挂载无姓名的体重/速度两行属性；玩家在横幅存在时开始蓄力会同步把 `newUnlock` 清空，保证横幅不残留到滑行阶段。根节点的 `data-character-stats` 提供 `delayed / visible / hidden` 三种可测试状态。
 - 角色动作：人形/机甲驱动 `rig_legL/rig_legR/rig_armL/rig_armR`，四足、鸟、蛙与悬浮角色使用独立动作组。蓄力随力度连续下蹲和前后错步，82% 以上加入轻颤；松手前 360 ms 加强蹬地步幅和前倾，随后把步态摆幅压到 8%，过渡为滑行平衡。自动刹车在预计自然停止前 1.8 秒或距崖 1.3 秒时切换为后仰与四肢外撑，按动作组分别处理双臂、翼和四足，并让 `SnowSpray` 在脚后持续循环；刹车阈值只影响表演，不参与物理积分。失败冻结后隐藏原模型，按角色色板生成 14 个方块碎片完成 1250 ms 慢动作散落。
@@ -44,11 +45,11 @@
 
 ## 4. 扩展点
 
-- 调整蓄力曲线、速度映射、体重惯性或天气阻力：修改 `src/EdgeBrake/physics.ts`；调整起点、崖口随机范围与阶段时长：修改 `hooks/useEdgeBrake.ts`。
+- 调整蓄力曲线、速度映射、体重惯性或天气阻力：修改 `src/EdgeBrake/physics.ts`；调整天气周期：修改 `characters.ts`；调整起点、崖口随机范围与阶段时长：修改 `hooks/useEdgeBrake.ts`。
 - 调整评分、通过范围、金币与连击：修改 `src/EdgeBrake/rules.ts`。
 - 新增或同步角色：把同源 GLB/PNG 与清单放入 `src/assets/characters/`；调整体重、速度、价格、缩放、朝向或动作分组：修改 `characters.ts`。
 - 修改角色动作、浮岛、天气、灯光、镜头、粒子或远景巨物：修改 `components/EdgeBrakeScene.tsx`，并同步 `doc/visual.md`。
-- 修改 HUD、蓄力控件、两行角色属性、解锁横幅时序、结果页、颜色、排版与动效：修改 `EdgeBrake.tsx`、`EdgeBrake.less`、`hooks/useEdgeBrake.ts` 和 `doc/visual.md`。
+- 修改 HUD、天气预报、蓄力控件、两行角色属性、解锁横幅时序、结果页、颜色、排版与动效：修改 `EdgeBrake.tsx`、`EdgeBrake.less`、`hooks/useEdgeBrake.ts` 和 `doc/visual.md`。
 - 修改中英文文案或声音：分别修改 `i18n/index.ts`、`utils/sounds.ts`，并同步需求文档的事件映射。
 - 修改排行榜入口、榜单视觉或行交互：修改 `EdgeBrake.tsx`、`EdgeBrake.less` 与 `src/shared/leaderboard/`；修改累计分提交、冠军刷新或 `score_beat` 目标选择：修改 `EdgeBrake.tsx`，永久 UUID 不得更换。云存档仍可基于现有 shared runtime 扩展，本地数据保留为离线回退而非平台排行榜数据源。
 - 发布：按 game-publish 流程检查 `meta.json`、海报来源、UUID、相对资源路径、构建产物与线上 bundle；本次玩法改造未自动发布。
