@@ -255,7 +255,7 @@
   &--blizzard { border-color: rgba(185, 228, 242, .72); box-shadow: 0 0 0 3px rgba(158, 221, 239, .08), 0 7px 18px rgba(4, 15, 23, .24); }
   &--blizzard .eb-weather-brief__icon { color: #e0f8ff; background: rgba(129, 195, 218, .22); }
 
-  &--compact { position: relative; top: auto; left: auto; z-index: auto; width: min(250px, 100%); margin-top: 15px; transform: none; text-align: left; }
+  &--compact { position: relative; top: auto; left: auto; z-index: auto; width: min(250px, 100%); margin-top: 15px; transform: none; text-align: left; animation-name: eb-weather-compact-in; }
   &--compact > b { display: none; }
 }
 
@@ -812,7 +812,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 104px 28px 36px;
+  padding: 72px 28px 36px;
   text-align: center;
   background: linear-gradient(180deg, rgba(9, 25, 38, 0.04), rgba(9, 25, 38, 0.28));
   cursor: pointer;
@@ -855,7 +855,7 @@
 
   p { margin-top: 8px; color: #c8dcda; font-size: 16px; line-height: 23px; font-weight: 700; }
 
-  &__scene-space { width: 1px; height: 220px; flex: 0 0 auto; }
+  &__scene-space { width: 1px; height: 180px; flex: 0 0 auto; }
 
   &__entries {
     width: 308px;
@@ -1249,6 +1249,11 @@
 @keyframes eb-weather-in {
   from { opacity: 0; transform: translateX(-50%) translateY(-9px) scale(.96); }
   to { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+}
+
+@keyframes eb-weather-compact-in {
+  from { opacity: 0; transform: translateY(-9px) scale(.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 @keyframes eb-fog-bank {
