@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { Leaderboard, useGameScore } from '@shared/leaderboard'
 import type { LeaderboardEntry } from '@shared/leaderboard'
-import { telegramId, useGameEvent } from '@shared/runtime'
+import { getTelegramId, useGameEvent, isInAigramNow } from '@shared/runtime'
 import { CHARACTERS, CHARACTER_BY_ID, characterName, nextRosterCharacter, weatherForLevel } from './characters'
 import EdgeBrakeScene from './components/EdgeBrakeScene'
 import Watermark from './components/Watermark'
@@ -128,14 +128,14 @@ export default function EdgeBrake() {
   }, [canRank, fetchLeaderboard])
 
   useEffect(() => {
-    if (!canRank || (view.phase !== 'cover' && view.phase !== 'gameover')) return
+    if (!isInAigramNow() || !canRank || (view.phase !== 'cover' && view.phase !== 'gameover')) return
     refreshLeaderboard().catch(() => {})
   }, [canRank, refreshLeaderboard, view.phase])
 
   useEffect(() => {
-    if (!canRank || view.phase !== 'charging' || view.level !== 1 || view.score !== 0 || snapshotEventRef.current === view.eventKey) return
+    if (!isInAigramNow() || !canRank || view.phase !== 'charging' || view.level !== 1 || view.score !== 0 || snapshotEventRef.current === view.eventKey) return
     snapshotEventRef.current = view.eventKey
-    const meId = telegramId ? String(telegramId) : ''
+    const meId = getTelegramId()! ? String(getTelegramId()!) : ''
     const snapshot = (rows: LeaderboardEntry[]) => {
       const me = meId ? rows.find(row => String(row.user_id) === meId) : null
       preRunBestRef.current = me ? Number(me.score) || 0 : 0
@@ -145,10 +145,10 @@ export default function EdgeBrake() {
   }, [canRank, refreshLeaderboard, view.eventKey, view.level, view.phase, view.score])
 
   const sendBeatNotify = useCallback(async (myScore: number) => {
-    if (!canRank || !telegramId || !events.canEmit || myScore <= preRunBestRef.current) return
+    if (!canRank || !getTelegramId()! || !events.canEmit || myScore <= preRunBestRef.current) return
     try {
       const fresh = await refreshLeaderboard()
-      const meId = String(telegramId)
+      const meId = String(getTelegramId()!)
       const beaten = fresh
         .filter(row => String(row.user_id) !== meId)
         .map(row => ({ id: String(row.user_id), score: Number(row.score) || 0 }))

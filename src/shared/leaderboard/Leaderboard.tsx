@@ -1,5 +1,5 @@
 import { type CSSProperties, useEffect, useState } from 'react'
-import { openAigramProfile } from '../runtime/bridge'
+import { isInAigramNow, openAigramProfile } from '../runtime/bridge';
 import type { LeaderboardEntry } from './useGameScore'
 import './Leaderboard.less'
 
@@ -58,7 +58,7 @@ interface Props {
 
 const ALTERU_APP_URL = 'https://alteru.app'
 
-export default function Leaderboard({ gameName, isInAigram, onClose, fetch }: Props) {
+export default function Leaderboard({ gameName,  onClose, fetch }: Props) {
   const s = STRINGS[detectLang()]
   const [entries, setEntries] = useState<LeaderboardEntry[]>([])
   const [loading, setLoading] = useState(true)
@@ -66,12 +66,6 @@ export default function Leaderboard({ gameName, isInAigram, onClose, fetch }: Pr
   const [reloadKey, setReloadKey] = useState(0)
 
   useEffect(() => {
-    if (!isInAigram) {
-      setEntries([])
-      setLoading(false)
-      setFailed(false)
-      return
-    }
     let alive = true
     setLoading(true)
     setFailed(false)
@@ -80,7 +74,7 @@ export default function Leaderboard({ gameName, isInAigram, onClose, fetch }: Pr
       .catch(() => { if (alive) setFailed(true) })
       .finally(() => { if (alive) setLoading(false) })
     return () => { alive = false }
-  }, [fetch, isInAigram, reloadKey])
+  }, [fetch, reloadKey])
 
   return (
     <section
@@ -103,7 +97,7 @@ export default function Leaderboard({ gameName, isInAigram, onClose, fetch }: Pr
         <div className="lb-body">
           {loading && <div className="lb-state"><span className="lb-spinner" /><span className="lb-state__text">{s.title}</span></div>}
 
-          {!loading && !isInAigram && (
+          {!loading && !isInAigramNow() && (
             <div className="lb-state lb-state--download">
               <CrownIcon />
               <span className="lb-state__text">{s.openInAlterU}</span>
@@ -111,7 +105,7 @@ export default function Leaderboard({ gameName, isInAigram, onClose, fetch }: Pr
             </div>
           )}
 
-          {!loading && isInAigram && failed && (
+          {!loading && isInAigramNow() && failed && (
             <div className="lb-state">
               <CrownIcon compact />
               <span className="lb-state__text">{s.error}</span>
@@ -119,13 +113,13 @@ export default function Leaderboard({ gameName, isInAigram, onClose, fetch }: Pr
             </div>
           )}
 
-          {!loading && isInAigram && !failed && entries.length === 0 && (
+          {!loading && isInAigramNow() && !failed && entries.length === 0 && (
             <div className="lb-state"><CrownIcon /><span className="lb-state__text">{s.empty}</span></div>
           )}
 
-          {!loading && isInAigram && !failed && entries.map((entry, index) => {
+          {!loading && isInAigramNow() && !failed && entries.map((entry, index) => {
             const rank = Number(entry.rank) || index + 1
-            const profileEnabled = !entry.isMe
+            const profileEnabled = !entry.isMe && isInAigramNow()
             return (
               <button
                 key={entry.user_id}
