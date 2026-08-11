@@ -18,13 +18,13 @@ function randomCliff() {
 }
 
 function readNumber(key: string, fallback: number) {
-  const value = Number(localStorage.getItem(key))
+  const value = Number(alteruLocalStorage.getItem(key))
   return Number.isFinite(value) ? value : fallback
 }
 
 function readUnlocked(): CharacterId[] {
   try {
-    const parsed = JSON.parse(localStorage.getItem('edge_brake_unlocked') || '[]')
+    const parsed = JSON.parse(alteruLocalStorage.getItem('edge_brake_unlocked') || '[]')
     const valid = Array.isArray(parsed) ? parsed.filter((id): id is CharacterId => CHARACTER_IDS.includes(id)) : []
     return Array.from(new Set<CharacterId>([DEFAULT_CHARACTER_ID, ...valid]))
   } catch {
@@ -33,15 +33,15 @@ function readUnlocked(): CharacterId[] {
 }
 
 function readCharacter(unlocked: CharacterId[]): CharacterId {
-  const saved = localStorage.getItem('edge_brake_character') as CharacterId | null
+  const saved = alteruLocalStorage.getItem('edge_brake_character') as CharacterId | null
   return saved && unlocked.includes(saved) ? saved : DEFAULT_CHARACTER_ID
 }
 
 function saveCollection(coins: number, unlocked: CharacterId[], characterId: CharacterId, maxLevel: number) {
-  localStorage.setItem('edge_brake_coins', String(coins))
-  localStorage.setItem('edge_brake_unlocked', JSON.stringify(unlocked))
-  localStorage.setItem('edge_brake_character', characterId)
-  localStorage.setItem('edge_brake_max_level', String(maxLevel))
+  alteruLocalStorage.setItem('edge_brake_coins', String(coins))
+  alteruLocalStorage.setItem('edge_brake_unlocked', JSON.stringify(unlocked))
+  alteruLocalStorage.setItem('edge_brake_character', characterId)
+  alteruLocalStorage.setItem('edge_brake_max_level', String(maxLevel))
 }
 
 const initialState = (): ViewState => {
@@ -58,7 +58,7 @@ const initialState = (): ViewState => {
     level: 1,
     combo: 0,
     bestCombo: readNumber('edge_brake_best_combo', 0),
-    bestDistance: localStorage.getItem('edge_brake_best_distance') === null
+    bestDistance: alteruLocalStorage.getItem('edge_brake_best_distance') === null
       ? null
       : readNumber('edge_brake_best_distance', 0),
     bestScore: readNumber('edge_brake_best_score', 0),
@@ -70,7 +70,7 @@ const initialState = (): ViewState => {
     newUnlock: null,
     result: null,
     eventKey: 0,
-    muted: localStorage.getItem('edge_brake_muted') === '1',
+    muted: alteruLocalStorage.getItem('edge_brake_muted') === '1',
   }
 }
 
@@ -214,9 +214,9 @@ export function useEdgeBrake() {
     const result: RoundResult = { distance, rating, points, coins: earnedCoins, passed }
     const nextCoins = current.coins + earnedCoins
 
-    localStorage.setItem('edge_brake_best_score', String(nextBestScore))
-    localStorage.setItem('edge_brake_best_combo', String(nextBestCombo))
-    localStorage.setItem('edge_brake_best_distance', String(nextBestDistance))
+    alteruLocalStorage.setItem('edge_brake_best_score', String(nextBestScore))
+    alteruLocalStorage.setItem('edge_brake_best_combo', String(nextBestCombo))
+    alteruLocalStorage.setItem('edge_brake_best_distance', String(nextBestDistance))
     saveCollection(nextCoins, current.unlockedCharacters, current.characterId, current.maxLevel)
     playSound(rating === 'edge' ? 'edge' : rating === 'great' ? 'great' : rating === 'early' ? 'earlyFail' : 'safe', current.muted)
     window.setTimeout(() => playSound('coin', current.muted), 90)
@@ -347,7 +347,7 @@ export function useEdgeBrake() {
 
   const toggleMuted = useCallback(() => {
     const next = !stateRef.current.muted
-    localStorage.setItem('edge_brake_muted', next ? '1' : '0')
+    alteruLocalStorage.setItem('edge_brake_muted', next ? '1' : '0')
     commit({ ...stateRef.current, muted: next })
     if (!next) playSound('button', false)
   }, [commit])

@@ -162,7 +162,7 @@ const strings = { zh, en }
 export type CopyKey = keyof typeof zh
 
 export function detectLocale(): Locale {
-  const override = localStorage.getItem('game_locale')
+  const override = alteruLocalStorage.getItem('game_locale')
   if (override === 'zh' || override === 'en') return override
   return navigator.language.toLowerCase().startsWith('zh') ? 'zh' : 'en'
 }
