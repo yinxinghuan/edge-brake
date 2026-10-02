@@ -1,7 +1,7 @@
 import { useEffect, useState, type CSSProperties } from 'react'
 import { CHARACTERS, CHARACTER_BY_ID, characterName, nextRosterCharacter, weatherForLevel } from '../EdgeBrake/characters'
-import EdgeBrakeScene from '../EdgeBrake/components/EdgeBrakeScene'
-import { FIELD_H, FIELD_W, type CharacterId, type WeatherKind } from '../EdgeBrake/types'
+import { type CharacterId, type WeatherKind } from '../EdgeBrake/types'
+import LandscapeScene from './LandscapeScene'
 import '../EdgeBrake/EdgeBrake.less'
 import { desk, game, ratingCopy } from './copy'
 import {
@@ -146,7 +146,7 @@ export default function GuestEdgeBrake() {
   })
 
   return (
-    <div className="cg-screen" data-guest="crazygames" data-tutorial={tutorialStep ?? 'off'} data-phase={view.phase} data-camp={camp}>
+    <div className="cg-screen" data-guest="crazygames" data-tutorial={tutorialStep ?? 'off'} data-phase={view.phase} data-camp={camp} data-docks={shopping && !rosterOpen ? 'on' : 'off'}>
       <div className="cg-frame" style={{ transform: `scale(${scale})` }}>
         <header className="cg-top">
           <div className="cg-brand">
@@ -200,15 +200,13 @@ export default function GuestEdgeBrake() {
             </ul>
           </aside>
 
-          <div className="cg-play-slot">
-            <div className="cg-play-scale">
               <main
-                className={`eb eb--${view.phase}`}
+                className={`eb eb--${view.phase} cg-stage`}
                 data-phase={view.phase}
                 data-level={view.level}
                 data-character={view.characterId}
                 data-weather={weather}
-                style={{ width: FIELD_W, height: FIELD_H, left: 0, top: 0, transform: 'none' }}
+                style={{ width: '100%', height: '100%', left: 0, top: 0, transform: 'none' }}
                 onPointerDown={event => {
                   if (rosterOpen || tutorialStep !== null || (event.target as HTMLElement).closest('button')) return
                   if (view.phase === 'cover' || view.phase === 'awaiting') {
@@ -237,7 +235,7 @@ export default function GuestEdgeBrake() {
                 )}
 
                 <section className="eb-stage" aria-label={game.title}>
-                  <EdgeBrakeScene
+                  <LandscapeScene
                     x={view.x}
                     cliffX={view.cliffX}
                     charging={view.isCharging}
@@ -428,8 +426,6 @@ export default function GuestEdgeBrake() {
                   </section>
                 )}
               </main>
-            </div>
-          </div>
 
           <aside className="cg-panel" aria-label={desk.workshop}>
             <div className="cg-panel__head">

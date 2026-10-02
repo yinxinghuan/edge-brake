@@ -22,9 +22,13 @@ Output is `dist-guest/`. `index.html` is a copy of `index.guest.html` with relat
 
 ## GitHub Pages
 
-`.github/workflows/deploy.yml` publishes the host `dist/` directory from `master`. This guest work does not change that workflow, so the AlterU site stays on the host build.
+`.github/workflows/deploy.yml` still publishes `dist/` from `master`. The host build runs first and stays at the site root. The workflow then runs `npm run build:guest` and copies that folder to `dist/crazygames/` before the Pages upload. Host `dist/index.html` is not replaced.
 
-To publish the guest later without replacing the host site, copy `dist-guest/` into a `crazygames/` directory inside the Pages artifact (or deploy that folder on its own). Relative URLs already work under `/crazygames/`.
+After this branch merges to `master`, the guest is expected at:
+
+https://yinxinghuan.github.io/edge-brake/crazygames/
+
+Relative asset URLs (`base: './'`) resolve under that path. The URL is live only after the Pages workflow finishes on `master`.
 
 ## Keyboard
 
@@ -44,7 +48,7 @@ Buttons, the crew list, and the workshop do not start a charge.
 
 ## What the guest adds
 
-- 16:9 desktop frame (1280×720) scaled to the iframe. The ice view stays the authored 390×700 stage, letterboxed in the center, with contracts on the left and the workshop on the right.
+- 16:9 desktop frame (1280×720) scaled to the iframe. The ice is the full frame. The guest camera fits the runway to the width on the pullback and keeps the crew large on the charge, shifted left so the track reads across the screen. Camp, contracts, and the workshop are overlays on the ice, not columns that shrink it. Contracts sit bottom-left and the workshop bottom-right between rounds. They hide while a slide is in motion and while the crew list is open.
 - English UI. No leaderboard, champion entry, friend avatars, AlterU watermark, guest shell, or Chinese copy.
 - Skippable three-card tutorial on the first launch. It can be reopened with How to play.
 - Camp rank, three live contracts, and four workshop tracks (launch springs, ice studs, cliff sense, expedition fund). Gear is bought between rounds with coins. Camp rank gates the next rank of each track. Progress is stored in `localStorage` under `cg_edge_brake_*`.

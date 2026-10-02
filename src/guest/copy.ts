@@ -117,7 +117,7 @@ export const desk = {
     },
     {
       title: 'The camp remembers',
-      body: 'Coins buy crew and workshop gear. Contracts raise your camp rank, and higher ranks unlock stronger gear. Progress is saved on this device.',
+      body: 'Coins buy crew and workshop gear. Contracts and the workshop sit along the bottom of the ice. Contracts raise your camp rank, and higher ranks unlock stronger gear. Progress is saved on this device.',
     },
   ],
 }
