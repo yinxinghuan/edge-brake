@@ -69,9 +69,9 @@ function FollowCamera({ x, cliffX, phase, charging, chargePower, rating }: { x: 
   useEffect(() => {
     if (phase !== 'cover') return
     const heroX = screenToWorld(x + 29)
-    cameraPositionRef.current.set(heroX + 6.8 + ahead, 6.8, 4.8)
-    lookXRef.current = heroX + 0.12 + ahead
-    lookYRef.current = 1.12
+    cameraPositionRef.current.set(heroX + 0.2 + ahead, 6.1, 8.8)
+    lookXRef.current = heroX + 6.8
+    lookYRef.current = 0.85
   }, [ahead, phase, x])
 
   useEffect(() => {
@@ -122,6 +122,66 @@ function FollowCamera({ x, cliffX, phase, charging, chargePower, rating }: { x: 
   }, [camera, phase])
 
   useFrame((state, delta) => {
+    if (size.width / Math.max(1, size.height) > 1.2) {
+      const hScale = size.height / 700
+      const originX = screenToWorld(40 + 29)
+      const characterX = screenToWorld(x + 29)
+      const focusX = phase === 'cover' || phase === 'awaiting' || phase === 'charging' ? originX : characterX
+      const pressure = charging ? chargePower : 0
+      const danger = phase === 'playing'
+        ? THREE.MathUtils.clamp((x + 49 - 40) / Math.max(1, cliffX - 40), 0, 1)
+        : 0
+      const drift = reduceMotion || phase !== 'cover' ? 0 : Math.sin(state.clock.elapsedTime * 0.62) * 0.12
+      let camX = focusX + 0.6
+      let camY = 6.4
+      let camZ = 9.4
+      let lookX = focusX + 6.2
+      let lookY = 0.72
+      let zoom = 62 * hScale
+      if (phase === 'cover' || phase === 'awaiting' || phase === 'charging') {
+        camX = originX + 0.2 - pressure * 0.35 + drift
+        camY = 6.1 - pressure * 0.18
+        camZ = 8.8
+        lookX = originX + 6.8
+        lookY = 0.85
+        zoom = (64 + pressure * 5) * hScale
+      } else if (phase === 'success' || (phase === 'result' && rating !== null && rating !== 'early')) {
+        camX = characterX + 1.4
+        camY = 5.2
+        camZ = 7.6
+        lookX = characterX + 2.4
+        lookY = 0.95
+        zoom = 68 * hScale
+      } else if (phase === 'falling' || phase === 'gameover') {
+        camX = characterX + 1.8
+        camY = 4.4
+        camZ = 6.8
+        lookX = characterX + 0.6
+        lookY = 0.15
+        zoom = 60 * hScale
+      } else {
+        const push = phase === 'earlyFail' || (phase === 'result' && rating === 'early') ? 0.15 : danger
+        camX = characterX + THREE.MathUtils.lerp(2.4, 0.8, push)
+        camY = THREE.MathUtils.lerp(8.2, 6.0, push)
+        camZ = THREE.MathUtils.lerp(12.6, 8.2, push)
+        lookX = characterX + THREE.MathUtils.lerp(14, 4.2, push)
+        lookY = 0.28
+        zoom = THREE.MathUtils.lerp(30, 52, push) * hScale
+      }
+      const response = phase === 'playing' ? 3.4 : 5.5
+      cameraPositionRef.current.x = THREE.MathUtils.damp(cameraPositionRef.current.x, camX, response, delta)
+      cameraPositionRef.current.y = THREE.MathUtils.damp(cameraPositionRef.current.y, camY, response, delta)
+      cameraPositionRef.current.z = THREE.MathUtils.damp(cameraPositionRef.current.z, camZ, response, delta)
+      lookXRef.current = THREE.MathUtils.damp(lookXRef.current, lookX, response, delta)
+      lookYRef.current = THREE.MathUtils.damp(lookYRef.current, lookY, response, delta)
+      camera.zoom = THREE.MathUtils.damp(camera.zoom, zoom, response, delta)
+      camera.position.copy(cameraPositionRef.current)
+      camera.lookAt(lookXRef.current, lookYRef.current, 0)
+      camera.updateProjectionMatrix()
+      camera.updateMatrixWorld()
+      return
+    }
+
     if (phase === 'cover') {
       const heroX = screenToWorld(x + 29)
       const drift = reduceMotion ? 0 : Math.sin(state.clock.elapsedTime * 0.62) * 0.16
@@ -656,7 +716,7 @@ function Atmosphere({ weather }: { weather: WeatherKind }) {
     scene.background.lerp(targetColor, 1 - Math.exp(-delta * 1.6))
     fog.color.lerp(targetColor, 1 - Math.exp(-delta * 1.6))
     fog.near = THREE.MathUtils.damp(fog.near, weather === 'fog' ? 8.5 : weather === 'blizzard' ? 10 : 12, 2.4, delta)
-    fog.far = THREE.MathUtils.damp(fog.far, weather === 'fog' ? 32 : weather === 'blizzard' ? 34 : 42, 2.4, delta)
+    fog.far = THREE.MathUtils.damp(fog.far, weather === 'fog' ? 48 : weather === 'blizzard' ? 52 : 70, 2.4, delta)
   })
 
   return null
@@ -1217,19 +1277,23 @@ function World({ x, cliffX, charging, autoBraking, chargePower, phase, rating, c
       <FollowCamera x={x} cliffX={cliffX} phase={phase} charging={charging} chargePower={chargePower} rating={rating} />
 
       <DistantEasterEgg phase={phase} weather={weather} />
-      <IcePlatform cliffX={cliffX} rating={rating} />
+      <group scale={[1, 1, 3.8]}>
+        <IcePlatform cliffX={cliffX} rating={rating} />
+      </group>
       <AssetCharacter id={characterId} x={x} charging={charging} autoBraking={autoBraking} chargePower={chargePower} phase={phase} velocity={velocity} />
       {(phase === 'falling' || phase === 'gameover') && <CharacterShatter x={x} characterId={characterId} />}
       <SnowSpray x={x} phase={phase} autoBraking={autoBraking} />
       {phase === 'success' && rating && rating !== 'early' && <VictoryBurst x={x} rating={rating} />}
       {(phase === 'earlyFail' || (phase === 'result' && rating === 'early')) && <EarlyFailureMeasure x={x} cliffX={cliffX} />}
       <EdgeCrystals cliffX={cliffX} visible={phase === 'result' && rating === 'edge'} />
-      <OceanDetails cliffX={cliffX} />
+      <group scale={[1, 1, 3.8]}>
+        <OceanDetails cliffX={cliffX} />
+      </group>
       <WeatherFx key={weather} weather={weather} x={x} />
       <FogBanks weather={weather} x={x} />
 
       {[-13, -9, 22, 27].map((position, i) => (
-        <group key={position} position={[position, -0.7, -9 - (i % 2) * 1.8]}>
+        <group key={position} position={[position, -0.7, -16 - (i % 2) * 2.4]}>
           <mesh scale={[1.55 + i * 0.18, 2.1 + (i % 2) * 0.75, 1.35]}>
             <coneGeometry args={[1, 2.8, 5]} />
             {material(i % 2 ? '#285469' : '#397184')}

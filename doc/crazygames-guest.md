@@ -48,7 +48,7 @@ Buttons, the crew list, and the workshop do not start a charge.
 
 ## What the guest adds
 
-- 16:9 desktop frame (1280×720) scaled to the iframe. The ice is the full frame. The guest camera fits the runway to the width on the pullback and keeps the crew large on the charge, shifted left so the track reads across the screen. Camp, contracts, and the workshop are overlays on the ice, not columns that shrink it. Contracts sit bottom-left and the workshop bottom-right between rounds. They hide while a slide is in motion and while the crew list is open.
+- 16:9 desktop frame (1280×720) scaled to the iframe. The ice is the full frame. The guest scene widens the rink and looks across it from the side, so the runway runs left to right and the sheet covers the playfield. Camp, contracts, and the workshop are overlays on the ice, not columns that shrink it. Contracts sit bottom-left and the workshop bottom-right between rounds. They hide while a slide is in motion and while the crew list is open.
 - English UI. No leaderboard, champion entry, friend avatars, AlterU watermark, guest shell, or Chinese copy.
 - Skippable three-card tutorial on the first launch. It can be reopened with How to play.
 - Camp rank, three live contracts, and four workshop tracks (launch springs, ice studs, cliff sense, expedition fund). Gear is bought between rounds with coins. Camp rank gates the next rank of each track. Progress is stored in `localStorage` under `cg_edge_brake_*`.
