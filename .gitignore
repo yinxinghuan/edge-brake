@@ -1,5 +1,7 @@
 node_modules/
 dist/
+dist-guest/
+src/guest/generated/
 .DS_Store
 _qa/ui/rejected/
 *.tsbuildinfo

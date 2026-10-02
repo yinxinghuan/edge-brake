@@ -1,0 +1,11 @@
+Black Diamond
+Author: Joth
+Source: https://opengameart.org/content/black-diamond
+Direct file: https://opengameart.org/sites/default/files/Black%20Diamond.mp3
+
+License: CC0 1.0 Universal (public domain)
+https://creativecommons.org/publicdomain/zero/1.0/
+
+Joth notes that credit is appreciated but not required. This guest build
+names the track and author in the desktop footer and keeps this file
+next to the audio.
