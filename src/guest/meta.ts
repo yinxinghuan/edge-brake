@@ -1,6 +1,6 @@
 export const SPRING_STEP = 0.035
 export const STUD_STEP = 0.03
-export const CAMP_XP_PER_LEVEL = 50
+export const CAMP_XP_PER_LEVEL = 28
 
 export type UpgradeId = 'springs' | 'studs' | 'sense' | 'fund'
 
@@ -18,28 +18,28 @@ export const UPGRADES: UpgradeDef[] = [
     name: 'Launch Springs',
     detail: 'Each rank adds 3.5% launch speed.',
     max: 5,
-    costs: [20, 45, 80, 130, 200],
+    costs: [16, 36, 70, 110, 170],
   },
   {
     id: 'studs',
     name: 'Ice Studs',
     detail: 'Each rank adds 3% grip, so you stop sooner.',
     max: 5,
-    costs: [20, 45, 80, 130, 200],
+    costs: [16, 36, 70, 110, 170],
   },
   {
     id: 'sense',
     name: 'Cliff Sense',
-    detail: 'Rank 1 is a coarse hold. Rank 3 marks the exact target.',
+    detail: 'The charge bar starts as a wide window. Each rank tightens the mark.',
     max: 3,
-    costs: [25, 60, 110],
+    costs: [12, 36, 80],
   },
   {
     id: 'fund',
     name: 'Expedition Fund',
     detail: 'Each rank adds 1 bonus coin every time you stop.',
     max: 3,
-    costs: [30, 70, 140],
+    costs: [18, 48, 100],
   },
 ]
 
@@ -53,7 +53,10 @@ export interface ContractDef {
 }
 
 export const CONTRACTS: ContractDef[] = [
-  { id: 'edge', title: 'Kiss the edge', detail: 'Land an on-the-edge stop.', target: 1, rewardCoins: 18, rewardXp: 28 },
+  { id: 'pass1', title: 'First stop', detail: 'Pass any level.', target: 1, rewardCoins: 12, rewardXp: 18 },
+  { id: 'purse', title: 'Camp purse', detail: 'Earn 16 coins in one run.', target: 16, rewardCoins: 10, rewardXp: 14 },
+  { id: 'clear2', title: 'Two clears', detail: 'Clear 2 levels in one run.', target: 2, rewardCoins: 14, rewardXp: 16 },
+  { id: 'edge', title: 'Kiss the edge', detail: 'Land an on-the-edge stop.', target: 1, rewardCoins: 18, rewardXp: 22 },
   { id: 'great2', title: 'Clean lines', detail: 'Score Beautiful or better twice.', target: 2, rewardCoins: 16, rewardXp: 24 },
   { id: 'clear4', title: 'Long expedition', detail: 'Clear 4 levels in one run.', target: 4, rewardCoins: 22, rewardXp: 32 },
   { id: 'fog', title: 'Fog crossing', detail: 'Pass a level in fog.', target: 1, rewardCoins: 14, rewardXp: 20 },
@@ -62,10 +65,12 @@ export const CONTRACTS: ContractDef[] = [
   { id: 'coins40', title: 'Pay the camp', detail: 'Earn 40 coins in one run.', target: 40, rewardCoins: 12, rewardXp: 18 },
   { id: 'crew5', title: 'Full sled', detail: 'Collect 5 crew members.', target: 5, rewardCoins: 20, rewardXp: 24 },
   { id: 'streak3', title: 'No falls', detail: 'Clear 3 levels in a row this run.', target: 3, rewardCoins: 18, rewardXp: 22 },
-  { id: 'level8', title: 'Deep ice', detail: 'Reach level 8.', target: 8, rewardCoins: 24, rewardXp: 36 },
+  { id: 'level8', title: 'Deep ice', detail: 'Reach level 8.', target: 8, rewardCoins: 24, rewardXp: 30 },
+  { id: 'edge3', title: 'Edge habit', detail: 'Land 3 on-the-edge stops.', target: 3, rewardCoins: 22, rewardXp: 24 },
+  { id: 'again', title: 'One more clear', detail: 'Pass another level.', target: 1, rewardCoins: 8, rewardXp: 10 },
 ]
 
-const RUN_SCOPED = new Set(['clear4', 'coins40', 'streak3'])
+const RUN_SCOPED = new Set(['purse', 'clear2', 'clear4', 'coins40', 'streak3'])
 
 export interface ContractSlot {
   id: string
@@ -103,6 +108,25 @@ export function campXpIntoLevel(xp: number) {
   return Math.max(0, xp) % CAMP_XP_PER_LEVEL
 }
 
+export function stipendForRank(level: number) {
+  return 4 + level * 2
+}
+
+export function nextGearHint(meta: GuestMeta, coins: number) {
+  const open = UPGRADES.map(def => ({ def, quote: quoteUpgrade(meta, def.id, coins) }))
+    .filter(item => item.quote.reason !== 'max')
+  if (!open.length) return 'All gear maxed. Camp rank still pays coins.'
+  const ready = open.filter(item => item.quote.ok).sort((a, b) => a.quote.cost - b.quote.cost)[0]
+  if (ready) return `Ready: ${ready.def.name} for ${ready.quote.cost} coins.`
+  const campBlocked = open.filter(item => item.quote.reason === 'camp').sort((a, b) => a.quote.nextRank - b.quote.nextRank)[0]
+  const coinBlocked = open.filter(item => item.quote.reason === 'coins').sort((a, b) => a.quote.cost - b.quote.cost)[0]
+  if (campBlocked && (!coinBlocked || campBlocked.quote.nextRank <= 2)) {
+    return `Camp ${campBlocked.quote.nextRank} unlocks ${campBlocked.def.name}.`
+  }
+  if (coinBlocked) return `${coinBlocked.quote.cost - coins} more coins for ${coinBlocked.def.name}.`
+  return 'Buy gear between rounds.'
+}
+
 export function upgradeById(id: UpgradeId) {
   return UPGRADES.find(upgrade => upgrade.id === id) ?? UPGRADES[0]
 }
@@ -119,11 +143,11 @@ export function freshMeta(): GuestMeta {
     sense: 0,
     fund: 0,
     xp: 0,
-    cursor: 4,
+    cursor: 3,
     contracts: [
-      { id: 'edge', progress: 0 },
-      { id: 'clear4', progress: 0 },
-      { id: 'fog', progress: 0 },
+      { id: 'pass1', progress: 0 },
+      { id: 'purse', progress: 0 },
+      { id: 'clear2', progress: 0 },
     ],
     runClears: 0,
     runStreak: 0,

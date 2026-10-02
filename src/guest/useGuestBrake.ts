@@ -8,6 +8,7 @@ import {
   SAVE_KEYS,
   advanceContracts,
   campLevel,
+  stipendForRank,
   loadMeta,
   quoteUpgrade,
   resetRunContracts,
@@ -95,10 +96,18 @@ export function canShop(phase: GamePhase) {
   return phase === 'cover' || phase === 'awaiting' || phase === 'result' || phase === 'gameover'
 }
 
+export interface GrowthNote {
+  xp: number
+  camp: number
+  rankedUp: boolean
+  stipend: number
+}
+
 export function useGuestBrake() {
   const [view, setView] = useState<ViewState>(initialState)
   const [meta, setMeta] = useState<GuestMeta>(bootMeta)
   const [banner, setBanner] = useState<string | null>(null)
+  const [growth, setGrowth] = useState<GrowthNote | null>(null)
   const stateRef = useRef(view)
   const metaRef = useRef(meta)
   const locksRef = useRef({ tutorial: false, roster: false })
@@ -161,6 +170,7 @@ export function useGuestBrake() {
     runClears = metaRef.current.runClears,
     runStreak = metaRef.current.runStreak,
   ) => {
+    const beforeLevel = campLevel(metaRef.current.xp)
     const updated = advanceContracts(metaRef.current, read, seedFor(crewCount, level))
     const nextMeta: GuestMeta = {
       ...updated.meta,
@@ -168,12 +178,22 @@ export function useGuestBrake() {
       runClears,
       runStreak,
     }
+    const afterLevel = campLevel(nextMeta.xp)
+    let stipend = 0
+    for (let level = beforeLevel + 1; level <= afterLevel; level += 1) stipend += stipendForRank(level)
+    const xpGained = Math.max(0, nextMeta.xp - metaRef.current.xp)
     commitMeta(nextMeta)
-    if (updated.completed.length > 0) {
-      showBanner(`CONTRACT CLEARED · ${updated.completed.map(contract => contract.title).join(' · ')}`)
+    if (xpGained > 0 || stipend > 0) {
+      setGrowth({ xp: xpGained, camp: afterLevel, rankedUp: afterLevel > beforeLevel, stipend })
+    }
+    const parts: string[] = []
+    if (afterLevel > beforeLevel) parts.push(`CAMP ${afterLevel} · +${stipend} COINS`)
+    if (updated.completed.length > 0) parts.push(`CONTRACT CLEARED · ${updated.completed.map(contract => contract.title).join(' · ')}`)
+    if (parts.length > 0) {
+      showBanner(parts.join(' · '))
       playSound('unlock', stateRef.current.muted)
     }
-    return { bonusCoins: updated.bonusCoins, meta: nextMeta }
+    return { bonusCoins: updated.bonusCoins + stipend, meta: nextMeta }
   }, [commitMeta, seedFor, showBanner])
 
   const beginRound = useCallback((level: number, characterId?: CharacterId, unlockedOverride?: CharacterId[], newUnlock: CharacterId | null = null) => {
@@ -300,16 +320,17 @@ export function useGuestBrake() {
     const runCoins = current.runCoins + earnedCoins
     const weather = weatherForLevel(current.level)
     const crewCount = current.unlockedCharacters.length
-    const stopXp = !passed ? 0 : rating === 'edge' ? 10 : rating === 'great' ? 6 : 3
+    const stopXp = !passed ? 1 : rating === 'edge' ? 12 : rating === 'great' ? 9 : 6
     const { bonusCoins } = applyMetaEvent(
       (id, prev) => {
-        if (id === 'edge') return prev + (rating === 'edge' ? 1 : 0)
+        if (id === 'pass1' || id === 'again') return prev + (passed ? 1 : 0)
+        if (id === 'edge' || id === 'edge3') return prev + (rating === 'edge' ? 1 : 0)
         if (id === 'great2') return prev + (rating === 'edge' || rating === 'great' ? 1 : 0)
         if (id === 'fog') return prev + (passed && weather === 'fog' ? 1 : 0)
         if (id === 'blizzard') return prev + (passed && weather === 'blizzard' ? 1 : 0)
         if (id === 'snow') return prev + (passed && weather === 'snow' ? 1 : 0)
-        if (id === 'clear4') return Math.max(prev, runClears)
-        if (id === 'coins40') return Math.max(prev, runCoins)
+        if (id === 'clear2' || id === 'clear4') return Math.max(prev, runClears)
+        if (id === 'purse' || id === 'coins40') return Math.max(prev, runCoins)
         if (id === 'streak3') return runStreak
         if (id === 'crew5') return Math.max(prev, crewCount)
         if (id === 'level8') return Math.max(prev, current.level)
@@ -585,6 +606,7 @@ export function useGuestBrake() {
     view,
     meta,
     banner,
+    growth,
     locksRef,
     camp: campLevel(meta.xp),
     beginCharge,

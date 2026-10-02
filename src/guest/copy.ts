@@ -113,11 +113,11 @@ export const desk = {
     },
     {
       title: 'Stop on the edge',
-      body: 'Closer stops pay more. Past 320px is too short. Over the cliff ends the expedition. Weather changes how far the same hold travels.',
+      body: 'The gold window on the charge bar is a rough aim. Release inside it. Closer stops pay more. Past 320px is too short. Over the cliff ends the expedition.',
     },
     {
       title: 'The camp remembers',
-      body: 'Coins buy crew and workshop gear. Contracts and the workshop sit along the bottom of the ice. Contracts raise your camp rank, and higher ranks unlock stronger gear. Progress is saved on this device.',
+      body: 'The first contract pays for Cliff Sense, which tightens that window. Camp rank unlocks the next gear rank and pays coins. Progress is saved on this device.',
     },
   ],
 }

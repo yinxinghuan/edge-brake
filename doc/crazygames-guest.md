@@ -51,7 +51,7 @@ Buttons, the crew list, and the workshop do not start a charge.
 - 16:9 desktop frame (1280×720) scaled to the iframe. The ice is the full frame. The guest scene widens the rink and looks across it from the side, so the runway runs left to right and the sheet covers the playfield. Camp, contracts, and the workshop are overlays on the ice, not columns that shrink it. Contracts sit bottom-left and the workshop bottom-right between rounds. They hide while a slide is in motion and while the crew list is open.
 - English UI. No leaderboard, champion entry, friend avatars, AlterU watermark, guest shell, or Chinese copy.
 - Skippable three-card tutorial on the first launch. It can be reopened with How to play.
-- Camp rank, three live contracts, and four workshop tracks (launch springs, ice studs, cliff sense, expedition fund). Gear is bought between rounds with coins. Camp rank gates the next rank of each track. Progress is stored in `localStorage` under `cg_edge_brake_*`.
+- Camp rank, three live contracts, and four workshop tracks (launch springs, ice studs, cliff sense, expedition fund). The first contracts are short, so a pass in the opening session can buy Cliff Sense. The charge bar shows a rough aim window immediately; higher Cliff Sense ranks tighten it. Camp rank gates the next gear rank and pays a coin stipend, including after the workshop is maxed. A stop also adds a little camp XP. Progress is stored in `localStorage` under `cg_edge_brake_*`.
 - Looping music: Black Diamond by Joth, CC0. See `src/guest/audio/LICENSE.txt`. Playback starts after the first key or click. Mute pauses it.
 
 ## Host hash check

@@ -10,6 +10,7 @@ import {
   campXpIntoLevel,
   contractById,
   gearSummary,
+  nextGearHint,
   quoteUpgrade,
   type UpgradeId,
 } from './meta'
@@ -58,13 +59,14 @@ function WeatherIcon({ weather }: { weather: WeatherKind }) {
 
 export default function GuestEdgeBrake() {
   const {
-    view, meta, banner, locksRef, camp,
+    view, meta, banner, growth, locksRef, camp,
     beginCharge, releaseCharge, prepareRetry, advanceResult,
     toggleMuted, goHome, selectCharacter, buyCharacter, buyUpgrade, markTutorialDone,
   } = useGuestBrake()
   const [scale, setScale] = useState(1)
   const [rosterOpen, setRosterOpen] = useState(false)
   const [deniedCharacter, setDeniedCharacter] = useState<CharacterId | null>(null)
+  const [launchFlash, setLaunchFlash] = useState(false)
   const [tutorialStep, setTutorialStep] = useState<number | null>(meta.tutorialDone ? null : 0)
   useBgm(view.muted)
 
@@ -81,9 +83,11 @@ export default function GuestEdgeBrake() {
   const nextResultCharacter = view.result?.passed
     ? CHARACTERS.find(character => !view.unlockedCharacters.includes(character.id)) ?? nextRosterCharacter(view.characterId)
     : CHARACTER_BY_ID[view.characterId]
-  const hint = (view.phase === 'awaiting' || view.phase === 'charging') && !rosterOpen
+  const hint = showChargeUi && !rosterOpen
     ? suggestHold(currentCharacter, weather, view.cliffX, meta.springs, meta.studs, meta.sense)
     : null
+  const inWindow = !!hint && view.phase === 'charging' && Math.abs(view.chargePower - hint.power) <= hint.spread
+  const gearHint = nextGearHint(meta, view.coins)
   const gear = gearSummary(meta)
   const tutorial = tutorialStep === null ? null : desk.steps[tutorialStep]
   const xpInto = campXpIntoLevel(meta.xp)
@@ -97,6 +101,13 @@ export default function GuestEdgeBrake() {
 
   useEffect(() => {
     if (!canShop(view.phase)) setRosterOpen(false)
+  }, [view.phase])
+
+  useEffect(() => {
+    if (view.phase !== 'playing') return
+    setLaunchFlash(true)
+    const timer = window.setTimeout(() => setLaunchFlash(false), 520)
+    return () => window.clearTimeout(timer)
   }, [view.phase])
 
   const closeTutorial = () => {
@@ -153,7 +164,7 @@ export default function GuestEdgeBrake() {
             <strong>{game.title}</strong>
             <span>{game.eyebrow}</span>
           </div>
-          <div className="cg-camp" aria-label={`Camp ${camp}`}>
+          <div className={`cg-camp${growth?.rankedUp && (view.phase === 'result' || view.phase === 'success' || view.phase === 'gameover') ? ' is-rankup' : ''}`} aria-label={`Camp ${camp}`}>
             <span>{desk.camp} {camp}</span>
             <i><b style={{ width: `${(xpInto / CAMP_XP_PER_LEVEL) * 100}%` }} /></i>
             <em>{xpInto}/{CAMP_XP_PER_LEVEL}</em>
@@ -186,7 +197,7 @@ export default function GuestEdgeBrake() {
                 const def = contractById(slot.id)
                 if (!def) return null
                 return (
-                  <li key={slot.id}>
+                  <li key={slot.id} className={slot.progress > 0 ? 'is-started' : ''}>
                     <div>
                       <strong>{def.title}</strong>
                       <em>{slot.progress}/{def.target}</em>
@@ -201,7 +212,7 @@ export default function GuestEdgeBrake() {
           </aside>
 
               <main
-                className={`eb eb--${view.phase} cg-stage`}
+                className={`eb eb--${view.phase} cg-stage${launchFlash ? ' cg-launch' : ''}`}
                 data-phase={view.phase}
                 data-level={view.level}
                 data-character={view.characterId}
@@ -252,6 +263,10 @@ export default function GuestEdgeBrake() {
 
                 {view.phase === 'playing' && weather !== 'clear' && <div className={`eb-weather-screen eb-weather-screen--${weather}`} aria-hidden="true"><i /><i /><i /></div>}
 
+                {view.phase === 'playing' && <div className="cg-speed" aria-hidden="true"><i /><i /><i /><i /></div>}
+                {view.phase === 'playing' && (view.isAutoBraking || trackProgress > 0.72) && <div className="cg-vignette" aria-hidden="true" />}
+                {view.phase === 'playing' && view.isAutoBraking && <div className="cg-brake">BRAKING</div>}
+
                 {view.phase === 'playing' && (
                   <div className={`eb-danger${view.isAutoBraking || trackProgress > 0.72 ? ' eb-danger--hot' : ''}`}>
                     <span>{game.cliffDistance}</span>
@@ -278,13 +293,14 @@ export default function GuestEdgeBrake() {
                 )}
 
                 {showChargeUi && (
-                  <div className={`eb-charge${view.phase === 'charging' ? ' eb-charge--active' : ''}${view.chargePower >= 0.82 ? ' eb-charge--strong' : ''}`}>
+                  <div className={`eb-charge${view.phase === 'charging' ? ' eb-charge--active' : ''}${view.chargePower >= 0.82 ? ' eb-charge--strong' : ''}${inWindow ? ' eb-charge--window' : ''}`}>
                     <span className="eb-charge__finger"><TouchAppIcon /></span>
                     <div>
-                      <strong>{view.phase === 'charging' ? game.releaseToLaunch : game.holdToCharge}</strong>
+                      <strong>{view.phase === 'charging' ? (inWindow ? 'RELEASE' : game.releaseToLaunch) : game.holdToCharge}</strong>
                       <span className="eb-charge__meter">
+                        {hint && <b className="cg-hold-band" style={{ left: `${Math.max(0, (hint.power - hint.spread) * 100)}%`, width: `${hint.spread * 2 * 100}%` }} />}
                         <i style={{ transform: `scaleX(${view.phase === 'charging' ? view.chargePower : 0})` } as CSSProperties} />
-                        {hint && <b className="cg-hold-mark" style={{ left: `${hint.power * 100}%` }} />}
+                        {hint?.precise && <b className="cg-hold-mark" style={{ left: `${hint.power * 100}%` }} />}
                       </span>
                       {hint && <small className="cg-hold-label">{hint.text}</small>}
                     </div>
@@ -293,14 +309,20 @@ export default function GuestEdgeBrake() {
                 )}
 
                 {view.phase === 'result' && view.result && (
-                  <section className={`eb-round-result eb-round-result--${view.result.rating}`} onPointerDown={event => event.stopPropagation()}>
+                  <section className={`eb-round-result cg-punch eb-round-result--${view.result.rating}`} onPointerDown={event => event.stopPropagation()}>
                     <div className="eb-round-result__score"><span>{game.roundScore}</span><strong>{view.result.points}</strong><small>/ 100</small></div>
                     <div className="eb-round-result__summary">
                       <strong>{ratingCopy[view.result.rating]}</strong>
                       <span>{game.distance(view.result.distance)}</span>
                       <small><CoinIcon />+{view.result.coins}</small>
                     </div>
-                    <p className="cg-result-note">{desk.camp} {camp} · {xpInto}/{CAMP_XP_PER_LEVEL} XP · {desk.clears} {meta.runClears}</p>
+                    <p className="cg-result-note">
+                      {growth && growth.xp > 0 ? `+${growth.xp} XP · ` : ''}
+                      {desk.camp} {camp} · {xpInto}/{CAMP_XP_PER_LEVEL}
+                      {growth?.rankedUp ? ' · RANK UP' : ''}
+                      {growth?.stipend ? ` · +${growth.stipend} camp coins` : ''}
+                      {' · '}{desk.clears} {meta.runClears}
+                    </p>
                     <div className="eb-round-result__next">
                       <img src={nextResultCharacter.spriteUrl} alt="" draggable={false} />
                       <span>{view.result.passed ? game.nextCrew : game.retryCrew}</span>
@@ -433,6 +455,7 @@ export default function GuestEdgeBrake() {
               <strong><CoinIcon />{view.coins}</strong>
             </div>
             <p className="cg-gear">{gear.length ? gear.join(' · ') : desk.stock}</p>
+            <p className="cg-next">{gearHint}</p>
             <p className="cg-rule">{desk.campRule}</p>
             {!shopping && <p className="cg-rule">{desk.shopLocked}</p>}
             <ul className="cg-upgrades">
@@ -447,7 +470,7 @@ export default function GuestEdgeBrake() {
                 else if (quote.reason === 'camp') label = desk.needCamp(quote.nextRank)
                 else if (quote.reason === 'coins') label = desk.needCoins(quote.cost - view.coins)
                 return (
-                  <li key={upgrade.id}>
+                  <li key={upgrade.id} className={quote.ok ? 'is-ready' : ''}>
                     <div>
                       <strong>{upgrade.name}</strong>
                       <em>{rank}/{upgrade.max}</em>
