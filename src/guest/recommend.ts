@@ -29,18 +29,11 @@ export function suggestHold(
   const raw = (neededSpeed / launchScale - 335) / 365
   if (!Number.isFinite(raw)) return null
   const power = Math.min(1, Math.max(0.12, raw))
-  if (sense <= 0) {
-    const bucket = power < 0.4 ? 0.3 : power < 0.72 ? 0.55 : 0.82
-    const text = power < 0.4 ? 'HOLD SHORT' : power < 0.72 ? 'HOLD MEDIUM' : 'HOLD LONG'
-    return { power: bucket, spread: 0.16, text, precise: false }
-  }
+  const coarse = power < 0.4 ? 'HOLD SHORT' : power < 0.72 ? 'HOLD MEDIUM' : 'HOLD LONG'
+  if (sense <= 0) return { power, spread: 0.16, text: coarse, precise: false }
   if (power >= 0.98) return { power: 1, spread: sense >= 2 ? 0.04 : 0.1, text: sense >= 2 ? 'FULL HOLD' : 'HOLD LONG', precise: sense >= 2 }
   if (power <= 0.14) return { power: 0.12, spread: sense >= 2 ? 0.04 : 0.1, text: sense >= 2 ? 'LIGHT TAP' : 'HOLD SHORT', precise: sense >= 2 }
-  if (sense === 1) {
-    if (power < 0.4) return { power: 0.3, spread: 0.1, text: 'HOLD SHORT', precise: false }
-    if (power < 0.72) return { power: 0.55, spread: 0.1, text: 'HOLD MEDIUM', precise: false }
-    return { power: 0.82, spread: 0.1, text: 'HOLD LONG', precise: false }
-  }
+  if (sense === 1) return { power, spread: 0.1, text: coarse, precise: false }
   if (sense === 2) {
     const snapped = Math.min(1, Math.max(0.12, Math.round(power * 10) / 10))
     return { power: snapped, spread: 0.045, text: `TARGET ${Math.round(snapped * 100)}%`, precise: true }

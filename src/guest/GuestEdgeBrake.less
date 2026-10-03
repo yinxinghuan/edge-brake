@@ -369,6 +369,11 @@
   box-shadow: 0 0 0 4px rgba(255, 209, 102, 0.28), 0 9px 22px rgba(4, 15, 23, 0.3);
 }
 
+.cg-stage .eb-charge--past {
+  border-color: #f06449;
+  box-shadow: 0 0 0 4px rgba(240, 100, 73, 0.32), 0 9px 22px rgba(4, 15, 23, 0.3);
+}
+
 .cg-stage .eb-charge--active em {
   animation: cg-pop 160ms ease-out;
 }
@@ -408,23 +413,39 @@
   animation: cg-pulse 640ms ease-in-out infinite alternate;
 }
 
-.cg-brake {
+.cg-held,
+.cg-approach {
   position: absolute;
   z-index: 26;
-  top: 196px;
   left: 50%;
   padding: 6px 12px;
   border: 3px solid #102129;
   border-radius: 999px;
-  color: #102129;
-  background: #ffd166;
   font-size: 14px;
   font-weight: 900;
   letter-spacing: 0.14em;
   transform: translateX(-50%);
   pointer-events: none;
+}
+
+.cg-held {
+  top: 148px;
+  color: #ffd166;
+  background: rgba(5, 16, 26, 0.78);
+}
+
+.cg-approach {
+  top: 196px;
+  color: #102129;
+  background: #eaf9f7;
   animation: cg-pop 180ms cubic-bezier(.2, 1.4, .4, 1) both;
 }
+
+.cg-approach--pass { background: #69d1b5; }
+.cg-approach--close { background: #9fd4ff; }
+.cg-approach--great { background: #ffd166; }
+.cg-approach--edge { color: #fff; background: #f06449; }
+.cg-approach--brake { background: #ffd166; }
 
 .cg-next {
   margin: 0;
@@ -436,6 +457,55 @@
 
 .cg-contracts .is-started {
   box-shadow: inset 3px 0 0 #69d1b5;
+}
+
+.cg-contracts .is-focus {
+  outline: 2px solid #ffd166;
+}
+
+.cg-next-tag {
+  margin-left: 6px;
+  padding: 1px 5px;
+  border-radius: 999px;
+  color: #102129;
+  background: #ffd166;
+  font-size: 9px;
+  letter-spacing: 0.08em;
+}
+
+.cg-quality {
+  position: relative;
+  height: 10px;
+  margin: 0 0 4px;
+  border-radius: 99px;
+  background: linear-gradient(90deg, #f06449 0%, #ffd166 55%, #69d1b5 100%);
+
+  b {
+    position: absolute;
+    top: -3px;
+    width: 4px;
+    height: 16px;
+    border-radius: 2px;
+    background: #102129;
+    transform: translateX(-2px);
+  }
+}
+
+.cg-quality-scale {
+  display: flex;
+  justify-content: space-between;
+  margin: 0 0 6px;
+  color: #5c6d6d;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+
+.cg-focus {
+  margin: 0 0 8px;
+  color: #102129;
+  font-size: 12px;
+  font-weight: 900;
 }
 
 .cg-upgrades .is-ready button {

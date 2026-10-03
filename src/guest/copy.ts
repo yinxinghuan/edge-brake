@@ -117,7 +117,7 @@ export const desk = {
     },
     {
       title: 'The camp remembers',
-      body: 'The first contract pays for Cliff Sense, which tightens that window. Camp rank unlocks the next gear rank and pays coins. Progress is saved on this device.',
+      body: 'Cliff Sense tightens the gold window. Springs shift it earlier. Studs make the same hold stop shorter. Camp rank unlocks the next gear rank and pays coins.',
     },
   ],
 }

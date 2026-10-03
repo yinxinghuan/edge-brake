@@ -1,5 +1,6 @@
-export const SPRING_STEP = 0.035
-export const STUD_STEP = 0.03
+export const SPRING_STEP = 0.07
+export const STUD_STEP = 0.08
+export const FUND_COINS = 2
 export const CAMP_XP_PER_LEVEL = 28
 
 export type UpgradeId = 'springs' | 'studs' | 'sense' | 'fund'
@@ -16,30 +17,30 @@ export const UPGRADES: UpgradeDef[] = [
   {
     id: 'springs',
     name: 'Launch Springs',
-    detail: 'Each rank adds 3.5% launch speed.',
+    detail: 'Each rank adds 7% launch speed and shifts the aim window earlier.',
     max: 5,
-    costs: [16, 36, 70, 110, 170],
+    costs: [16, 28, 56, 96, 150],
   },
   {
     id: 'studs',
     name: 'Ice Studs',
-    detail: 'Each rank adds 3% grip, so you stop sooner.',
+    detail: 'Each rank adds 8% grip. The same hold stops shorter and the window moves later.',
     max: 5,
-    costs: [16, 36, 70, 110, 170],
+    costs: [16, 28, 56, 96, 150],
   },
   {
     id: 'sense',
     name: 'Cliff Sense',
     detail: 'The charge bar starts as a wide window. Each rank tightens the mark.',
     max: 3,
-    costs: [12, 36, 80],
+    costs: [12, 28, 64],
   },
   {
     id: 'fund',
     name: 'Expedition Fund',
-    detail: 'Each rank adds 1 bonus coin every time you stop.',
+    detail: 'Each rank adds 2 bonus coins every time you stop.',
     max: 3,
-    costs: [18, 48, 100],
+    costs: [18, 40, 84],
   },
 ]
 
@@ -68,6 +69,8 @@ export const CONTRACTS: ContractDef[] = [
   { id: 'level8', title: 'Deep ice', detail: 'Reach level 8.', target: 8, rewardCoins: 24, rewardXp: 30 },
   { id: 'edge3', title: 'Edge habit', detail: 'Land 3 on-the-edge stops.', target: 3, rewardCoins: 22, rewardXp: 24 },
   { id: 'again', title: 'One more clear', detail: 'Pass another level.', target: 1, rewardCoins: 8, rewardXp: 10 },
+  { id: 'great1', title: 'Beautiful stop', detail: 'Score Beautiful or better.', target: 1, rewardCoins: 14, rewardXp: 16 },
+  { id: 'gear1', title: 'Fit the sled', detail: 'Buy one workshop rank.', target: 1, rewardCoins: 12, rewardXp: 14 },
 ]
 
 const RUN_SCOPED = new Set(['purse', 'clear2', 'clear4', 'coins40', 'streak3'])
@@ -117,7 +120,16 @@ export function nextGearHint(meta: GuestMeta, coins: number) {
     .filter(item => item.quote.reason !== 'max')
   if (!open.length) return 'All gear maxed. Camp rank still pays coins.'
   const ready = open.filter(item => item.quote.ok).sort((a, b) => a.quote.cost - b.quote.cost)[0]
-  if (ready) return `Ready: ${ready.def.name} for ${ready.quote.cost} coins.`
+  if (ready) {
+    const feel = ready.def.id === 'springs'
+      ? 'The aim window moves earlier.'
+      : ready.def.id === 'studs'
+        ? 'The same hold stops shorter.'
+        : ready.def.id === 'sense'
+          ? 'The aim window gets tighter.'
+          : `+${FUND_COINS} coins on every stop.`
+    return `Ready: ${ready.def.name} for ${ready.quote.cost} coins. ${feel}`
+  }
   const campBlocked = open.filter(item => item.quote.reason === 'camp').sort((a, b) => a.quote.nextRank - b.quote.nextRank)[0]
   const coinBlocked = open.filter(item => item.quote.reason === 'coins').sort((a, b) => a.quote.cost - b.quote.cost)[0]
   if (campBlocked && (!coinBlocked || campBlocked.quote.nextRank <= 2)) {
@@ -220,12 +232,22 @@ export function resetRunContracts(meta: GuestMeta): GuestMeta {
 }
 
 export function pickNext(activeIds: string[], cursor: number) {
-  for (let offset = 0; offset < CONTRACTS.length; offset += 1) {
-    const index = (cursor + offset) % CONTRACTS.length
-    const id = CONTRACTS[index].id
-    if (!activeIds.includes(id)) return { id, cursor: index + 1 }
+  const hasQuick = activeIds.some(isQuickContract)
+  const choose = (quickOnly: boolean) => {
+    for (let offset = 0; offset < CONTRACTS.length; offset += 1) {
+      const index = (cursor + offset) % CONTRACTS.length
+      const id = CONTRACTS[index].id
+      if (activeIds.includes(id)) continue
+      if (quickOnly && !isQuickContract(id)) continue
+      return { id, cursor: index + 1 }
+    }
+    return null
   }
-  return { id: CONTRACTS[0].id, cursor: cursor + 1 }
+  if (!hasQuick) {
+    const quick = choose(true)
+    if (quick) return quick
+  }
+  return choose(false) ?? { id: CONTRACTS[0].id, cursor: cursor + 1 }
 }
 
 export function advanceContracts(
@@ -287,8 +309,25 @@ export function gearSummary(meta: GuestMeta) {
   if (meta.sense === 1) parts.push('Coarse target')
   if (meta.sense === 2) parts.push('Close target')
   if (meta.sense >= 3) parts.push('Exact target')
-  if (meta.fund) parts.push(`+${meta.fund} coin on stop`)
+  if (meta.fund) parts.push(`+${meta.fund * FUND_COINS} coins on stop`)
   return parts
+}
+
+const LONG_CONTRACTS = new Set(['clear4', 'coins40', 'level8', 'edge3', 'crew5', 'streak3'])
+
+function isQuickContract(id: string) {
+  const def = contractById(id)
+  return !!def && def.target <= 2 && !LONG_CONTRACTS.has(id)
+}
+
+export function focusContract(meta: GuestMeta) {
+  const ranked = meta.contracts.flatMap(slot => {
+    const def = contractById(slot.id)
+    if (!def) return []
+    return [{ def, progress: slot.progress, ratio: slot.progress / def.target }]
+  })
+  ranked.sort((a, b) => b.ratio - a.ratio || a.def.target - b.def.target)
+  return ranked[0] ?? null
 }
 
 export const SAVE_KEYS = {

@@ -5,6 +5,7 @@ import { evaluateStop } from '../EdgeBrake/rules'
 import { CHARACTER_FRONT, type CharacterId, type GamePhase, type RoundResult, type ViewState } from '../EdgeBrake/types'
 import { playSound } from '../EdgeBrake/utils/sounds'
 import {
+  FUND_COINS,
   SAVE_KEYS,
   advanceContracts,
   campLevel,
@@ -193,7 +194,7 @@ export function useGuestBrake() {
       showBanner(parts.join(' · '))
       playSound('unlock', stateRef.current.muted)
     }
-    return { bonusCoins: updated.bonusCoins + stipend, meta: nextMeta }
+    return { bonusCoins: updated.bonusCoins + stipend, meta: nextMeta, cleared: updated.completed.length > 0 }
   }, [commitMeta, seedFor, showBanner])
 
   const beginRound = useCallback((level: number, characterId?: CharacterId, unlockedOverride?: CharacterId[], newUnlock: CharacterId | null = null) => {
@@ -314,7 +315,7 @@ export function useGuestBrake() {
     const current = stateRef.current
     const evaluation = evaluateStop(distance, current.combo)
     const { rating, points, passed, nextCombo } = evaluation
-    const earnedCoins = evaluation.coins + metaRef.current.fund
+    const earnedCoins = evaluation.coins + metaRef.current.fund * FUND_COINS
     const runClears = passed ? metaRef.current.runClears + 1 : metaRef.current.runClears
     const runStreak = passed ? metaRef.current.runStreak + 1 : 0
     const runCoins = current.runCoins + earnedCoins
@@ -325,7 +326,8 @@ export function useGuestBrake() {
       (id, prev) => {
         if (id === 'pass1' || id === 'again') return prev + (passed ? 1 : 0)
         if (id === 'edge' || id === 'edge3') return prev + (rating === 'edge' ? 1 : 0)
-        if (id === 'great2') return prev + (rating === 'edge' || rating === 'great' ? 1 : 0)
+        if (id === 'great1' || id === 'great2') return prev + (rating === 'edge' || rating === 'great' ? 1 : 0)
+        if (id === 'gear1') return prev
         if (id === 'fog') return prev + (passed && weather === 'fog' ? 1 : 0)
         if (id === 'blizzard') return prev + (passed && weather === 'blizzard' ? 1 : 0)
         if (id === 'snow') return prev + (passed && weather === 'snow' ? 1 : 0)
@@ -538,14 +540,33 @@ export function useGuestBrake() {
       playSound('deny', current.muted)
       return false
     }
-    const nextMeta: GuestMeta = { ...metaRef.current, [id]: quote.nextRank }
-    const coins = current.coins - quote.cost
+    commitMeta({ ...metaRef.current, [id]: quote.nextRank })
+    const { bonusCoins, cleared } = applyMetaEvent(
+      (contractId, prev) => (contractId === 'gear1' ? prev + 1 : prev),
+      current.unlockedCharacters.length,
+      Math.max(current.level, current.maxLevel),
+    )
+    const coins = current.coins - quote.cost + bonusCoins
     saveCollection(coins, current.unlockedCharacters, current.characterId, current.maxLevel)
-    commitMeta(nextMeta)
-    playSound('unlock', current.muted)
-    commit({ ...current, coins, eventKey: current.eventKey + 1 })
+    if (!cleared) {
+      playSound('unlock', current.muted)
+      const feel = id === 'springs'
+        ? 'SPRINGS ON · WINDOW MOVES EARLIER'
+        : id === 'studs'
+          ? 'STUDS ON · SAME HOLD STOPS SHORTER'
+          : id === 'sense'
+            ? 'SENSE ON · WINDOW TIGHTER'
+            : `FUND ON · +${FUND_COINS} COINS EACH STOP`
+      showBanner(feel)
+    }
+    commit({
+      ...stateRef.current,
+      coins,
+      runCoins: current.runCoins + bonusCoins,
+      eventKey: current.eventKey + 1,
+    })
     return true
-  }, [commit, commitMeta])
+  }, [applyMetaEvent, commit, commitMeta, showBanner])
 
   const goHome = useCallback(() => {
     clearTimers()

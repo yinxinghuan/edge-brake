@@ -9,6 +9,7 @@ import {
   UPGRADES,
   campXpIntoLevel,
   contractById,
+  focusContract,
   gearSummary,
   nextGearHint,
   quoteUpgrade,
@@ -87,7 +88,22 @@ export default function GuestEdgeBrake() {
     ? suggestHold(currentCharacter, weather, view.cliffX, meta.springs, meta.studs, meta.sense)
     : null
   const inWindow = !!hint && view.phase === 'charging' && Math.abs(view.chargePower - hint.power) <= hint.spread
+  const pastWindow = !!hint && view.phase === 'charging' && view.chargePower > hint.power + hint.spread
   const gearHint = nextGearHint(meta, view.coins)
+  const focus = focusContract(meta)
+  const approach = view.isAutoBraking
+    ? 'brake'
+    : remaining <= 10
+      ? 'edge'
+      : remaining <= 35
+        ? 'great'
+        : remaining <= 80
+          ? 'close'
+          : remaining <= 320
+            ? 'pass'
+            : 'closing'
+  const approachText = approach === 'brake' ? 'BRAKING' : approach === 'edge' ? 'EDGE' : approach === 'great' ? 'BEAUTIFUL' : approach === 'close' ? 'CLOSE' : approach === 'pass' ? 'PASS ZONE' : 'CLOSING'
+  const stopQuality = view.result ? Math.max(0, Math.min(1, 1 - view.result.distance / 400)) : 0
   const gear = gearSummary(meta)
   const tutorial = tutorialStep === null ? null : desk.steps[tutorialStep]
   const xpInto = campXpIntoLevel(meta.xp)
@@ -164,7 +180,7 @@ export default function GuestEdgeBrake() {
             <strong>{game.title}</strong>
             <span>{game.eyebrow}</span>
           </div>
-          <div className={`cg-camp${growth?.rankedUp && (view.phase === 'result' || view.phase === 'success' || view.phase === 'gameover') ? ' is-rankup' : ''}`} aria-label={`Camp ${camp}`}>
+          <div className={`cg-camp${growth?.rankedUp && (view.phase === 'cover' || view.phase === 'awaiting' || view.phase === 'result' || view.phase === 'success' || view.phase === 'gameover') ? ' is-rankup' : ''}`} aria-label={`Camp ${camp}`}>
             <span>{desk.camp} {camp}</span>
             <i><b style={{ width: `${(xpInto / CAMP_XP_PER_LEVEL) * 100}%` }} /></i>
             <em>{xpInto}/{CAMP_XP_PER_LEVEL}</em>
@@ -197,9 +213,10 @@ export default function GuestEdgeBrake() {
                 const def = contractById(slot.id)
                 if (!def) return null
                 return (
-                  <li key={slot.id} className={slot.progress > 0 ? 'is-started' : ''}>
+                  <li key={slot.id} className={`${slot.progress > 0 ? 'is-started' : ''}${focus?.def.id === slot.id ? ' is-focus' : ''}`}>
                     <div>
                       <strong>{def.title}</strong>
+                      {focus?.def.id === slot.id && <b className="cg-next-tag">NEXT</b>}
                       <em>{slot.progress}/{def.target}</em>
                     </div>
                     <p>{def.detail}</p>
@@ -264,8 +281,9 @@ export default function GuestEdgeBrake() {
                 {view.phase === 'playing' && weather !== 'clear' && <div className={`eb-weather-screen eb-weather-screen--${weather}`} aria-hidden="true"><i /><i /><i /></div>}
 
                 {view.phase === 'playing' && <div className="cg-speed" aria-hidden="true"><i /><i /><i /><i /></div>}
-                {view.phase === 'playing' && (view.isAutoBraking || trackProgress > 0.72) && <div className="cg-vignette" aria-hidden="true" />}
-                {view.phase === 'playing' && view.isAutoBraking && <div className="cg-brake">BRAKING</div>}
+                {view.phase === 'playing' && (view.isAutoBraking || trackProgress > 0.72 || remaining <= 320) && <div className="cg-vignette" aria-hidden="true" />}
+                {view.phase === 'playing' && <div className="cg-held">HELD {Math.round(view.chargePower * 100)}%</div>}
+                {view.phase === 'playing' && <div className={`cg-approach cg-approach--${approach}`}>{approachText}</div>}
 
                 {view.phase === 'playing' && (
                   <div className={`eb-danger${view.isAutoBraking || trackProgress > 0.72 ? ' eb-danger--hot' : ''}`}>
@@ -293,10 +311,10 @@ export default function GuestEdgeBrake() {
                 )}
 
                 {showChargeUi && (
-                  <div className={`eb-charge${view.phase === 'charging' ? ' eb-charge--active' : ''}${view.chargePower >= 0.82 ? ' eb-charge--strong' : ''}${inWindow ? ' eb-charge--window' : ''}`}>
+                  <div className={`eb-charge${view.phase === 'charging' ? ' eb-charge--active' : ''}${view.chargePower >= 0.82 ? ' eb-charge--strong' : ''}${inWindow ? ' eb-charge--window' : ''}${pastWindow ? ' eb-charge--past' : ''}`}>
                     <span className="eb-charge__finger"><TouchAppIcon /></span>
                     <div>
-                      <strong>{view.phase === 'charging' ? (inWindow ? 'RELEASE' : game.releaseToLaunch) : game.holdToCharge}</strong>
+                      <strong>{view.phase === 'charging' ? (pastWindow ? 'PAST THE MARK' : inWindow ? 'RELEASE' : game.releaseToLaunch) : game.holdToCharge}</strong>
                       <span className="eb-charge__meter">
                         {hint && <b className="cg-hold-band" style={{ left: `${Math.max(0, (hint.power - hint.spread) * 100)}%`, width: `${hint.spread * 2 * 100}%` }} />}
                         <i style={{ transform: `scaleX(${view.phase === 'charging' ? view.chargePower : 0})` } as CSSProperties} />
@@ -316,6 +334,10 @@ export default function GuestEdgeBrake() {
                       <span>{game.distance(view.result.distance)}</span>
                       <small><CoinIcon />+{view.result.coins}</small>
                     </div>
+                    <div className="cg-quality" aria-hidden="true">
+                      <b style={{ left: `${stopQuality * 100}%` }} />
+                    </div>
+                    <p className="cg-quality-scale"><span>MISS</span><span>EDGE</span></p>
                     <p className="cg-result-note">
                       {growth && growth.xp > 0 ? `+${growth.xp} XP · ` : ''}
                       {desk.camp} {camp} · {xpInto}/{CAMP_XP_PER_LEVEL}
@@ -323,6 +345,7 @@ export default function GuestEdgeBrake() {
                       {growth?.stipend ? ` · +${growth.stipend} camp coins` : ''}
                       {' · '}{desk.clears} {meta.runClears}
                     </p>
+                    {focus && <p className="cg-focus">NEXT · {focus.def.title} {focus.progress}/{focus.def.target}</p>}
                     <div className="eb-round-result__next">
                       <img src={nextResultCharacter.spriteUrl} alt="" draggable={false} />
                       <span>{view.result.passed ? game.nextCrew : game.retryCrew}</span>
