@@ -28,6 +28,8 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
+      - run: npm run build:guest
+      - run: mkdir -p dist/crazygames && cp -a dist-guest/. dist/crazygames/
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist

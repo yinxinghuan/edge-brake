@@ -6,7 +6,10 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "dev:guest": "vite --config vite.guest.config.ts",
+    "build:guest": "tsc -b && vite build --config vite.guest.config.ts",
+    "preview:guest": "vite preview --config vite.guest.config.ts --outDir dist-guest"
   },
   "dependencies": {
     "@react-three/drei": "^9.114.0",
